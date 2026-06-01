@@ -1,0 +1,2570 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>로우앤프리 (Low & Free) - 저당 정보 앱</title>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: linear-gradient(135deg, #e0f7f5 0%, #fef9e7 100%);
+    min-height: 100vh;
+    color: #2C3E50;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 24px 12px;
+    gap: 32px;
+    flex-wrap: wrap;
+  }
+  .info-side {
+    max-width: 320px;
+    color: #2C3E50;
+  }
+  .info-side h1 {
+    font-size: 28px;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .info-side .tagline {
+    font-size: 14px;
+    color: #5a7184;
+    margin-bottom: 18px;
+    font-weight: 500;
+  }
+  .info-side ul {
+    list-style: none;
+    background: rgba(255,255,255,0.7);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 4px 20px rgba(78, 205, 196, 0.1);
+  }
+  .info-side li {
+    font-size: 13px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(78,205,196,0.15);
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .info-side li:last-child { border: none; }
+  .info-side li .num {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: #4ECDC4; color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 11px; flex-shrink: 0;
+  }
+  /* Phone frame */
+  .phone {
+    width: 390px;
+    height: 844px;
+    background: #fff;
+    border-radius: 48px;
+    box-shadow:
+      0 0 0 10px #1a1a1a,
+      0 0 0 12px #2a2a2a,
+      0 30px 60px rgba(0,0,0,0.25);
+    position: relative;
+    overflow: hidden;
+  }
+  .notch {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 32px;
+    background: #1a1a1a;
+    border-radius: 20px;
+    z-index: 100;
+  }
+  .status-bar {
+    height: 44px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 24px 0 28px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #2C3E50;
+    z-index: 50;
+    position: relative;
+  }
+  .status-bar .right { display:flex; gap:6px; align-items:center; font-size:12px; }
+  .app-container {
+    height: calc(100% - 44px);
+    overflow: hidden;
+    position: relative;
+    background: #f7f9fb;
+  }
+  .screen {
+    position: absolute;
+    inset: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-bottom: 90px;
+    background: #f7f9fb;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    transform: translateX(100%);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .screen.active {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .screen::-webkit-scrollbar { width: 0; }
+
+  /* Top header */
+  .header {
+    position: sticky;
+    top: 0;
+    background: rgba(247,249,251,0.95);
+    backdrop-filter: blur(10px);
+    z-index: 20;
+    padding: 16px 20px 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .header h2 {
+    font-size: 20px;
+    font-weight: 700;
+  }
+  .header .back-btn {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: white; border: none;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  }
+  .header.transparent {
+    background: transparent;
+    backdrop-filter: none;
+  }
+
+  /* Bottom tab bar */
+  .tab-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 80px;
+    background: rgba(255,255,255,0.97);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(0,0,0,0.05);
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-start;
+    padding-top: 10px;
+    z-index: 100;
+  }
+  .tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    color: #95a5b5;
+    transition: color 0.2s;
+  }
+  .tab.active { color: #4ECDC4; }
+  .tab svg { width: 24px; height: 24px; }
+  .tab span { font-size: 10px; font-weight: 600; }
+  .tab.center {
+    position: relative;
+    margin-top: -20px;
+  }
+  .tab.center .scan-btn {
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 16px rgba(78,205,196,0.4);
+    color: white;
+  }
+  .tab.center span { color: #4ECDC4; margin-top: 6px; }
+
+  /* HOME SCREEN */
+  .home-hero {
+    background: linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%);
+    color: white;
+    padding: 28px 20px 48px;
+    border-radius: 0 0 32px 32px;
+    position: relative;
+    overflow: hidden;
+  }
+  .home-hero::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 160px; height: 160px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 50%;
+  }
+  .home-hero::after {
+    content: '';
+    position: absolute;
+    bottom: -60px; left: -30px;
+    width: 120px; height: 120px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 50%;
+  }
+  .greeting { font-size: 13px; opacity: 0.9; margin-bottom: 4px; }
+  .brand-name { font-size: 28px; font-weight: 800; margin-bottom: 6px; letter-spacing: -1px; }
+  .brand-sub { font-size: 13px; opacity: 0.95; line-height: 1.5; max-width: 240px; position: relative; z-index: 2; }
+  .quick-search {
+    margin: -24px 16px 20px;
+    background: white;
+    border-radius: 20px;
+    padding: 14px 18px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+    z-index: 5;
+    cursor: pointer;
+  }
+  .quick-search svg { color: #4ECDC4; }
+  .quick-search-text { color: #95a5b5; font-size: 14px; flex: 1; }
+
+  .section-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 24px 20px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .section-title .more { font-size: 12px; color: #95a5b5; font-weight: 500; cursor: pointer; }
+
+  .today-card {
+    margin: 0 16px;
+    background: white;
+    border-radius: 20px;
+    padding: 18px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+  }
+  .today-card .label { font-size: 12px; color: #95a5b5; margin-bottom: 6px; }
+  .today-card .amount { font-size: 24px; font-weight: 800; }
+  .today-card .amount span { font-size: 14px; color: #95a5b5; font-weight: 500; }
+  .progress-bar {
+    height: 8px;
+    background: #f0f3f5;
+    border-radius: 4px;
+    margin: 12px 0 8px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4ECDC4 0%, #44A08D 100%);
+    border-radius: 4px;
+    transition: width 0.6s ease;
+  }
+  .progress-fill.warn { background: linear-gradient(90deg, #FFB74D 0%, #FF9800 100%); }
+  .progress-fill.danger { background: linear-gradient(90deg, #FF7676 0%, #F54E4E 100%); }
+  .progress-text {
+    font-size: 11px;
+    color: #95a5b5;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  /* feature grid */
+  .feature-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding: 0 16px;
+  }
+  .feature-card {
+    background: white;
+    border-radius: 18px;
+    padding: 16px;
+    cursor: pointer;
+    transition: transform 0.2s;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+  }
+  .feature-card:active { transform: scale(0.97); }
+  .feature-card .icon-box {
+    width: 40px; height: 40px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 10px;
+  }
+  .feature-card .icon-box.mint { background: #e0f7f5; color: #44A08D; }
+  .feature-card .icon-box.yellow { background: #fff8d6; color: #d4a017; }
+  .feature-card .icon-box.pink { background: #ffe1e8; color: #e74c6c; }
+  .feature-card .icon-box.purple { background: #ece4ff; color: #7c5dc8; }
+  .feature-card .title { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
+  .feature-card .desc { font-size: 11px; color: #95a5b5; line-height: 1.4; }
+
+  /* sweetener carousel */
+  .scroll-x {
+    display: flex;
+    gap: 12px;
+    padding: 0 16px 8px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+  }
+  .scroll-x::-webkit-scrollbar { display: none; }
+  .sweet-card {
+    flex: 0 0 140px;
+    background: white;
+    border-radius: 16px;
+    padding: 14px;
+    cursor: pointer;
+    scroll-snap-align: start;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+    border: 1px solid transparent;
+    transition: border-color 0.2s;
+  }
+  .sweet-card:active { border-color: #4ECDC4; }
+  .safety-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 20px;
+    margin-bottom: 8px;
+  }
+  .safety-badge.safe { background: #e0f7f5; color: #44A08D; }
+  .safety-badge.caution { background: #fff4e0; color: #e67e22; }
+  .safety-badge.warning { background: #ffe1e1; color: #e74c3c; }
+  .sweet-card .name { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
+  .sweet-card .name-en { font-size: 10px; color: #95a5b5; margin-bottom: 8px; }
+  .sweet-card .meta { font-size: 11px; color: #607080; line-height: 1.5; }
+
+  /* SCAN SCREEN */
+  .scan-tabs {
+    display: flex;
+    background: white;
+    border-radius: 14px;
+    margin: 8px 16px 16px;
+    padding: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+  .scan-tab {
+    flex: 1;
+    padding: 10px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: #95a5b5;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .scan-tab.active {
+    background: linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%);
+    color: white;
+  }
+
+  .scan-mode {
+    padding: 0 16px;
+    display: none;
+  }
+  .scan-mode.active { display: block; }
+
+  /* Sample list */
+  .sample-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .sample-card {
+    background: white;
+    border-radius: 16px;
+    padding: 12px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+  }
+  .sample-card:hover { border-color: #4ECDC4; }
+  .sample-card .img-placeholder {
+    width: 100%;
+    aspect-ratio: 1;
+    background: linear-gradient(135deg, #f0f3f5 0%, #e0e6eb 100%);
+    border-radius: 12px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+  }
+  .sample-card .product-name { font-size: 12px; font-weight: 700; }
+  .sample-card .product-cat { font-size: 10px; color: #95a5b5; margin-top: 2px; }
+  .sample-help {
+    background: #fff8d6;
+    color: #8b6914;
+    padding: 12px 14px;
+    border-radius: 12px;
+    font-size: 12px;
+    line-height: 1.5;
+    margin-bottom: 14px;
+    border: 1px solid #f0d674;
+  }
+
+  /* OCR mode */
+  .upload-zone {
+    border: 2px dashed #4ECDC4;
+    background: white;
+    border-radius: 16px;
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .upload-zone:hover { background: #f0fbfa; }
+  .upload-zone .upload-icon {
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    background: #e0f7f5;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 12px;
+    color: #44A08D;
+  }
+  .upload-zone .upload-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .upload-zone .upload-sub { font-size: 11px; color: #95a5b5; }
+  .ocr-preview {
+    margin-top: 12px;
+    background: white;
+    padding: 14px;
+    border-radius: 14px;
+    display: none;
+  }
+  .ocr-preview img {
+    width: 100%;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    max-height: 200px;
+    object-fit: contain;
+  }
+  .ocr-status {
+    font-size: 12px;
+    color: #44A08D;
+    margin-bottom: 8px;
+  }
+  .ocr-text {
+    background: #f7f9fb;
+    border-radius: 10px;
+    padding: 10px;
+    font-size: 11px;
+    color: #607080;
+    max-height: 100px;
+    overflow-y: auto;
+    line-height: 1.5;
+  }
+
+  /* Text input mode */
+  .text-input-area {
+    background: white;
+    border-radius: 16px;
+    padding: 14px;
+  }
+  .text-input-area textarea {
+    width: 100%;
+    border: 1px solid #e0e6eb;
+    border-radius: 12px;
+    padding: 12px;
+    font-size: 13px;
+    font-family: inherit;
+    min-height: 140px;
+    resize: vertical;
+    color: #2C3E50;
+    outline: none;
+  }
+  .text-input-area textarea:focus { border-color: #4ECDC4; }
+  .primary-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%);
+    color: white;
+    border: none;
+    padding: 14px;
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 12px;
+    box-shadow: 0 4px 12px rgba(78,205,196,0.3);
+  }
+  .primary-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .secondary-btn {
+    width: 100%;
+    background: white;
+    color: #44A08D;
+    border: 1px solid #4ECDC4;
+    padding: 12px;
+    border-radius: 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+
+  /* RESULT SCREEN */
+  .result-summary {
+    margin: 0 16px 16px;
+    background: white;
+    border-radius: 20px;
+    padding: 18px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+  }
+  .result-product {
+    font-size: 16px;
+    font-weight: 800;
+    margin-bottom: 4px;
+  }
+  .result-meta {
+    font-size: 11px;
+    color: #95a5b5;
+    margin-bottom: 14px;
+  }
+  .verdict-box {
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .verdict-box.good { background: linear-gradient(135deg, #e0f7f5 0%, #c4f0eb 100%); }
+  .verdict-box.warn { background: linear-gradient(135deg, #fff4e0 0%, #ffe2b8 100%); }
+  .verdict-box.bad { background: linear-gradient(135deg, #ffe1e1 0%, #ffc4c4 100%); }
+  .verdict-emoji { font-size: 32px; }
+  .verdict-text .title { font-size: 15px; font-weight: 800; margin-bottom: 2px; }
+  .verdict-text .sub { font-size: 11px; color: #607080; line-height: 1.4; }
+
+  .detected-list {
+    margin: 0 16px;
+  }
+  .detected-card {
+    background: white;
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    border-left: 4px solid #4ECDC4;
+  }
+  .detected-card.caution { border-left-color: #e67e22; }
+  .detected-card.warning { border-left-color: #e74c3c; }
+  .detected-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+  }
+  .detected-name {
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .detected-name-en {
+    font-size: 10px;
+    color: #95a5b5;
+    margin-top: 2px;
+  }
+  .detected-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin: 8px 0;
+  }
+  .stat-cell {
+    background: #f7f9fb;
+    border-radius: 10px;
+    padding: 8px;
+    text-align: center;
+  }
+  .stat-cell .stat-label { font-size: 9px; color: #95a5b5; margin-bottom: 2px; }
+  .stat-cell .stat-value { font-size: 12px; font-weight: 700; }
+  .detected-side {
+    font-size: 11px;
+    color: #607080;
+    line-height: 1.5;
+    margin-top: 6px;
+    padding-top: 8px;
+    border-top: 1px dashed #e0e6eb;
+  }
+  .detected-side b { color: #e67e22; }
+
+  .recommend-section {
+    margin: 24px 16px 0;
+  }
+  .recommend-card {
+    background: white;
+    border-radius: 16px;
+    padding: 14px;
+    display: flex;
+    gap: 12px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+  .recommend-card .img-thumb {
+    width: 60px; height: 60px;
+    background: linear-gradient(135deg, #f0f3f5 0%, #e0e6eb 100%);
+    border-radius: 12px;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+  }
+  .recommend-card .info { flex: 1; }
+  .recommend-card .info .name { font-size: 13px; font-weight: 700; }
+  .recommend-card .info .reason { font-size: 11px; color: #607080; margin: 4px 0; }
+  .recommend-card .score {
+    background: #e0f7f5;
+    color: #44A08D;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 20px;
+    align-self: center;
+  }
+
+  /* TRACKING SCREEN */
+  .tracker-summary {
+    margin: 0 16px 16px;
+    background: linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .tracker-summary::before {
+    content: '';
+    position: absolute;
+    top: -30px; right: -30px;
+    width: 100px; height: 100px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 50%;
+  }
+  .tracker-summary .label { font-size: 12px; opacity: 0.9; margin-bottom: 4px; position: relative; }
+  .tracker-summary .total { font-size: 28px; font-weight: 800; position: relative; }
+  .tracker-summary .total span { font-size: 14px; opacity: 0.8; }
+  .ring-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    margin-top: 14px;
+    position: relative;
+  }
+  .ring-stat { text-align: center; }
+  .ring-stat .v { font-size: 16px; font-weight: 700; }
+  .ring-stat .l { font-size: 10px; opacity: 0.8; margin-top: 2px; }
+
+  .log-entry {
+    background: white;
+    border-radius: 14px;
+    padding: 12px 14px;
+    margin: 0 16px 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+  }
+  .log-entry .time {
+    font-size: 11px;
+    color: #95a5b5;
+    width: 50px;
+  }
+  .log-entry .item {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .log-entry .item .sub {
+    display: block;
+    font-size: 10px;
+    color: #95a5b5;
+    font-weight: 400;
+    margin-top: 2px;
+  }
+  .log-entry .amount {
+    font-size: 12px;
+    font-weight: 700;
+    color: #44A08D;
+  }
+  .log-entry.warn .amount { color: #e67e22; }
+
+  .add-log-btn {
+    margin: 16px;
+    background: white;
+    border: 2px dashed #4ECDC4;
+    color: #44A08D;
+    padding: 14px;
+    border-radius: 14px;
+    font-size: 13px;
+    font-weight: 600;
+    width: calc(100% - 32px);
+    cursor: pointer;
+  }
+
+  /* COMMUNITY */
+  .community-tabs {
+    display: flex;
+    gap: 8px;
+    padding: 0 16px 12px;
+    overflow-x: auto;
+  }
+  .community-tabs::-webkit-scrollbar { display:none; }
+  .ctab {
+    flex-shrink: 0;
+    padding: 8px 14px;
+    background: white;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #607080;
+    cursor: pointer;
+    border: 1px solid #e0e6eb;
+  }
+  .ctab.active {
+    background: #2C3E50;
+    color: white;
+    border-color: #2C3E50;
+  }
+  .post-card {
+    background: white;
+    border-radius: 16px;
+    padding: 14px;
+    margin: 0 16px 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+  .post-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #4ECDC4, #44A08D);
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 13px; font-weight: 700;
+  }
+  .post-user .name { font-size: 12px; font-weight: 700; }
+  .post-user .time { font-size: 10px; color: #95a5b5; }
+  .post-tag {
+    margin-left: auto;
+    font-size: 10px;
+    background: #e0f7f5;
+    color: #44A08D;
+    padding: 3px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+  }
+  .post-body { font-size: 13px; line-height: 1.5; color: #2C3E50; margin-bottom: 8px; }
+  .post-product {
+    background: #f7f9fb;
+    border-radius: 10px;
+    padding: 8px 10px;
+    font-size: 11px;
+    color: #607080;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .rating { color: #f5b300; font-size: 11px; }
+  .post-actions {
+    display: flex;
+    gap: 16px;
+    border-top: 1px solid #f0f3f5;
+    padding-top: 8px;
+    color: #95a5b5;
+    font-size: 11px;
+  }
+  .post-actions .act { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+
+  /* DETAIL */
+  .detail-hero {
+    background: linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%);
+    color: white;
+    padding: 80px 20px 30px;
+    text-align: center;
+  }
+  .detail-hero.caution { background: linear-gradient(135deg, #FFB74D 0%, #FF9800 100%); }
+  .detail-hero.warning { background: linear-gradient(135deg, #FF7676 0%, #F54E4E 100%); }
+  .detail-hero .name { font-size: 24px; font-weight: 800; }
+  .detail-hero .name-en { font-size: 13px; opacity: 0.9; margin-top: 4px; }
+  .detail-hero .badges {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+  .detail-hero .badges span {
+    background: rgba(255,255,255,0.25);
+    padding: 4px 10px;
+    border-radius: 14px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .detail-section {
+    background: white;
+    margin: -20px 16px 0;
+    border-radius: 20px;
+    padding: 18px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+  }
+  .info-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .info-cell {
+    background: #f7f9fb;
+    padding: 12px;
+    border-radius: 12px;
+  }
+  .info-cell .l { font-size: 10px; color: #95a5b5; margin-bottom: 4px; }
+  .info-cell .v { font-size: 14px; font-weight: 700; }
+  .info-cell .sub { font-size: 10px; color: #95a5b5; margin-top: 2px; }
+  .detail-block { margin-top: 14px; }
+  .detail-block h4 { font-size: 13px; font-weight: 700; margin-bottom: 8px; color: #2C3E50; }
+  .detail-block p { font-size: 12px; color: #5a7184; line-height: 1.6; }
+  .side-list { margin-top: 6px; }
+  .side-list li {
+    list-style: none;
+    font-size: 12px;
+    color: #5a7184;
+    padding: 6px 0 6px 18px;
+    position: relative;
+    line-height: 1.5;
+  }
+  .side-list li::before {
+    content: '';
+    position: absolute;
+    left: 4px; top: 12px;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #4ECDC4;
+  }
+  .side-list.warn li::before { background: #e67e22; }
+  .side-list.danger li::before { background: #e74c3c; }
+  .src-list { margin-top: 6px; }
+  .src-list li {
+    list-style: none;
+    font-size: 11px;
+    color: #5a7184;
+    padding: 5px 0 5px 18px;
+    position: relative;
+    line-height: 1.5;
+  }
+  .src-list li::before {
+    content: '📄';
+    position: absolute;
+    left: 0; top: 4px;
+    font-size: 10px;
+  }
+
+  /* MY PAGE */
+  .profile-head {
+    background: linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%);
+    color: white;
+    padding: 30px 20px;
+    border-radius: 0 0 24px 24px;
+    text-align: center;
+  }
+  .profile-head .big-avatar {
+    width: 70px; height: 70px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.25);
+    margin: 0 auto 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; font-weight: 700;
+  }
+  .profile-head .name { font-size: 18px; font-weight: 700; }
+  .profile-head .joined { font-size: 11px; opacity: 0.9; margin-top: 4px; }
+  .stat-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin: -20px 16px 16px;
+    background: white;
+    border-radius: 16px;
+    padding: 14px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+  }
+  .stat-cards .c { text-align: center; }
+  .stat-cards .c .n { font-size: 18px; font-weight: 800; color: #44A08D; }
+  .stat-cards .c .l { font-size: 10px; color: #95a5b5; margin-top: 2px; }
+  .menu-list {
+    background: white;
+    margin: 0 16px;
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .menu-item {
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f3f5;
+  }
+  .menu-item:last-child { border: none; }
+  .menu-item .icon-circle {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: #e0f7f5;
+    display: flex; align-items: center; justify-content: center;
+    color: #44A08D;
+  }
+  .menu-item .text {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .menu-item .arrow { color: #95a5b5; }
+
+  /* Splash mask */
+  .scanning-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(247,249,251,0.97);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    text-align: center;
+    padding: 40px;
+  }
+  .scanning-overlay.hidden { display: none; }
+  .scanner {
+    width: 80px; height: 80px;
+    border: 4px solid #e0f7f5;
+    border-top-color: #4ECDC4;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .scanning-overlay .msg { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+  .scanning-overlay .sub { font-size: 11px; color: #95a5b5; max-width: 240px; line-height: 1.5; }
+
+  /* Tooltip / chip */
+  .filter-chips {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 0 16px 8px;
+  }
+  .filter-chips::-webkit-scrollbar { display:none; }
+  .chip {
+    flex-shrink: 0;
+    padding: 6px 12px;
+    background: white;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #607080;
+    cursor: pointer;
+    border: 1px solid #e0e6eb;
+  }
+  .chip.active { background: #4ECDC4; color: white; border-color: #4ECDC4; }
+
+  .responsive-warning {
+    display: none;
+  }
+  @media (max-width: 900px) {
+    .info-side { display: none; }
+  }
+  @media (max-width: 480px) {
+    .phone {
+      width: 100vw;
+      height: 100vh;
+      border-radius: 0;
+      box-shadow: none;
+    }
+    .notch { display: none; }
+    .page-wrap { padding: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+  <aside class="info-side">
+    <h1>로우앤프리</h1>
+    <p class="tagline">'제로'에 속지 않는, 진짜 저당의 시작</p>
+    <ul>
+      <li><span class="num">1</span>원재료명을 사진으로 찍거나 입력하세요</li>
+      <li><span class="num">2</span>27종 감미료/당류를 자동 분석합니다</li>
+      <li><span class="num">3</span>안전 수치, 부작용을 한눈에 확인</li>
+      <li><span class="num">4</span>일일 섭취량을 기록·누적 관리</li>
+      <li><span class="num">5</span>커뮤니티에서 후기를 공유하세요</li>
+    </ul>
+    <p style="font-size:11px;color:#95a5b5;margin-top:14px;line-height:1.5;">
+      ※ 본 프로토타입은 데모용이며, 의학적 조언이 아닙니다.<br>
+      섭취 전 전문의와 상담하세요.
+    </p>
+  </aside>
+
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="status-bar">
+      <span>9:41</span>
+      <span class="right">●●●● 5G ⌁ 100%</span>
+    </div>
+    <div class="app-container" id="app">
+      <!-- HOME -->
+      <div class="screen active" id="screen-home">
+        <div class="home-hero">
+          <div class="greeting">안녕하세요, 조이님 👋</div>
+          <div class="brand-name">Low & Free</div>
+          <div class="brand-sub">‘제로’ 라벨에 속지 마세요. 원재료를 찍으면 진짜 저당인지 알려드릴게요.</div>
+        </div>
+        <div class="quick-search" onclick="goScreen('scan')">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <span class="quick-search-text">제품/감미료 검색하기</span>
+        </div>
+
+        <div class="section-title">오늘의 당류 섭취 <span class="more" onclick="goScreen('tracker')">기록 보기 →</span></div>
+        <div class="today-card">
+          <div class="label">총 섭취량</div>
+          <div class="amount" id="todayTotal">12.4<span> g / 25g (WHO 권장)</span></div>
+          <div class="progress-bar"><div class="progress-fill" id="progressBar" style="width: 49%"></div></div>
+          <div class="progress-text">
+            <span>인공감미료 1종 · 천연당 2종</span>
+            <span id="progressPct">49%</span>
+          </div>
+        </div>
+
+        <div class="section-title">빠른 기능</div>
+        <div class="feature-grid">
+          <div class="feature-card" onclick="goScreen('scan')">
+            <div class="icon-box mint">
+              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9V5a2 2 0 0 1 2-2h4M3 15v4a2 2 0 0 0 2 2h4M21 9V5a2 2 0 0 0-2-2h-4M21 15v4a2 2 0 0 1-2 2h-4"/></svg>
+            </div>
+            <div class="title">원재료 분석</div>
+            <div class="desc">사진/텍스트로 감미료 찾기</div>
+          </div>
+          <div class="feature-card" onclick="goScreen('tracker')">
+            <div class="icon-box yellow">
+              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 6V12L16 14"/><circle cx="12" cy="12" r="10"/></svg>
+            </div>
+            <div class="title">오늘의 기록</div>
+            <div class="desc">섭취량 일일 누적</div>
+          </div>
+          <div class="feature-card" onclick="openSweetenerLibrary()">
+            <div class="icon-box pink">
+              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2zM22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            </div>
+            <div class="title">감미료 백과</div>
+            <div class="desc">27종 상세 정보</div>
+          </div>
+          <div class="feature-card" onclick="goScreen('community')">
+            <div class="icon-box purple">
+              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            </div>
+            <div class="title">커뮤니티</div>
+            <div class="desc">후기 · 부작용 공유</div>
+          </div>
+        </div>
+
+        <div class="section-title">주요 감미료 한눈에 <span class="more" onclick="openSweetenerLibrary()">전체 보기 →</span></div>
+        <div class="scroll-x" id="featuredSweeteners"></div>
+
+        <div class="section-title">로우앤프리 가이드</div>
+        <div style="margin: 0 16px;">
+          <div class="recommend-card" style="cursor: default;">
+            <div class="img-thumb" style="background: linear-gradient(135deg, #fff8d6, #ffe2b8);">💡</div>
+            <div class="info">
+              <div class="name">‘제로’ ≠ ‘무해’</div>
+              <div class="reason">제로 표기 제품도 인공감미료가 들어있어요. 부작용을 꼭 확인하세요.</div>
+            </div>
+          </div>
+          <div class="recommend-card" style="cursor: default;">
+            <div class="img-thumb" style="background: linear-gradient(135deg, #e0f7f5, #c4f0eb);">🌿</div>
+            <div class="info">
+              <div class="name">천연 감미료가 더 안전?</div>
+              <div class="reason">스테비아·알룰로스도 과량 섭취 시 소화 불량을 유발할 수 있어요.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCAN -->
+      <div class="screen" id="screen-scan">
+        <div class="header">
+          <button class="back-btn" onclick="goScreen('home')">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          </button>
+          <h2>원재료 분석</h2>
+        </div>
+        <div class="scan-tabs">
+          <div class="scan-tab active" data-mode="sample" onclick="switchScanMode('sample')">샘플 체험</div>
+          <div class="scan-tab" data-mode="ocr" onclick="switchScanMode('ocr')">사진 OCR</div>
+          <div class="scan-tab" data-mode="text" onclick="switchScanMode('text')">텍스트 입력</div>
+        </div>
+
+        <div class="scan-mode active" id="mode-sample">
+          <div class="sample-help">
+            🧪 <b>샘플 체험 모드:</b> 실제 시중 제품(가상)을 클릭하면 원재료명을 분석한 결과를 보여드려요. 처음 사용해보시는 분들께 추천!
+          </div>
+          <div class="sample-grid" id="sampleGrid"></div>
+        </div>
+
+        <div class="scan-mode" id="mode-ocr">
+          <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+            <div class="upload-icon">
+              <svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            </div>
+            <div class="upload-title">원재료명 사진 업로드</div>
+            <div class="upload-sub">제품 뒷면의 원재료 라벨을 찍어주세요</div>
+            <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="handleOcrUpload(event)">
+          </div>
+          <div class="ocr-preview" id="ocrPreview">
+            <img id="ocrImg" alt="업로드 이미지">
+            <div class="ocr-status" id="ocrStatus">텍스트 인식 중...</div>
+            <div class="ocr-text" id="ocrText"></div>
+            <button class="primary-btn" id="ocrAnalyzeBtn" onclick="analyzeOcr()" disabled>이 텍스트로 분석하기</button>
+          </div>
+          <div class="sample-help" style="margin-top:14px;">
+            📸 <b>팁:</b> '원재료명' 부분이 잘 보이도록 가까이서, 빛 반사 없이 찍으면 인식 정확도가 높아져요.
+          </div>
+        </div>
+
+        <div class="scan-mode" id="mode-text">
+          <div class="text-input-area">
+            <textarea id="textInput" placeholder="원재료명을 그대로 입력하세요.
+
+예) 정제수, 액상과당, 아스파탐(페닐알라닌 함유), 구연산, 합성착향료, 아세설팜칼륨"></textarea>
+            <button class="primary-btn" onclick="analyzeText()">분석하기</button>
+            <button class="secondary-btn" onclick="loadSampleText()">샘플 텍스트 불러오기</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RESULT -->
+      <div class="screen" id="screen-result">
+        <div class="header">
+          <button class="back-btn" onclick="goScreen('scan')">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          </button>
+          <h2>분석 결과</h2>
+        </div>
+        <div class="result-summary">
+          <div class="result-product" id="resultProduct">제품명</div>
+          <div class="result-meta" id="resultMeta">2026.05.08 · 분석 완료</div>
+          <div class="verdict-box" id="verdictBox">
+            <div class="verdict-emoji" id="verdictEmoji">🔍</div>
+            <div class="verdict-text">
+              <div class="title" id="verdictTitle">분석 중</div>
+              <div class="sub" id="verdictSub"></div>
+            </div>
+          </div>
+          <button class="secondary-btn" onclick="logCurrentProduct()" style="margin-top:0">📝 오늘 섭취 기록에 추가</button>
+        </div>
+        <div class="section-title" style="margin-top:8px;">검출된 감미료/당류</div>
+        <div class="detected-list" id="detectedList"></div>
+        <div class="recommend-section">
+          <div class="section-title" style="margin: 0 0 12px;">💚 더 안전한 대체 제품</div>
+          <div id="recommendList"></div>
+        </div>
+      </div>
+
+      <!-- DETAIL (sweetener detail) -->
+      <div class="screen" id="screen-detail">
+        <div class="header transparent" style="position:absolute; top:0; left:0; right:0; background:transparent; z-index:30;">
+          <button class="back-btn" onclick="goBack()">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          </button>
+        </div>
+        <div class="detail-hero" id="detailHero">
+          <div class="name" id="detailName"></div>
+          <div class="name-en" id="detailNameEn"></div>
+          <div class="badges" id="detailBadges"></div>
+        </div>
+        <div class="detail-section">
+          <div class="info-row" id="detailInfoRow"></div>
+          <div class="detail-block">
+            <h4>🌱 감미료 정보</h4>
+            <p id="detailDesc"></p>
+          </div>
+          <div class="detail-block">
+            <h4>⚠️ 가능한 부작용</h4>
+            <ul class="side-list" id="detailSideList"></ul>
+          </div>
+          <div class="detail-block">
+            <h4>📋 안전 섭취 가이드</h4>
+            <p id="detailGuide"></p>
+          </div>
+          <div class="detail-block">
+            <h4>📍 자주 쓰이는 제품</h4>
+            <p id="detailWhereUsed"></p>
+          </div>
+          <div class="detail-block">
+            <h4>📚 출처</h4>
+            <ul class="src-list" id="detailSourceList"></ul>
+            <p style="font-size:10px;color:#95a5b5;margin-top:8px;line-height:1.5;">
+              ※ 본 정보는 위 자료를 바탕으로 정리한 것으로, 의학적 조언이 아닙니다.<br>
+              임신·수유·지병이 있다면 반드시 의사·약사와 상담하세요.
+            </p>
+          </div>
+        </div>
+        <div style="height:30px;"></div>
+      </div>
+
+      <!-- LIBRARY -->
+      <div class="screen" id="screen-library">
+        <div class="header">
+          <button class="back-btn" onclick="goScreen('home')">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          </button>
+          <h2>감미료 백과</h2>
+        </div>
+        <div class="filter-chips" id="libFilters"></div>
+        <div style="padding: 0 16px;" id="libraryList"></div>
+      </div>
+
+      <!-- TRACKER -->
+      <div class="screen" id="screen-tracker">
+        <div class="header"><h2>섭취 기록</h2></div>
+        <div class="tracker-summary">
+          <div class="label">2026년 5월 8일 · 오늘 섭취</div>
+          <div class="total" id="trackerTotal">12.4<span> g / 25g</span></div>
+          <div class="ring-stats">
+            <div class="ring-stat"><div class="v" id="ringNatural">10.2g</div><div class="l">천연당</div></div>
+            <div class="ring-stat"><div class="v" id="ringSugarAlc">1.8g</div><div class="l">당알코올</div></div>
+            <div class="ring-stat"><div class="v" id="ringArtificial">0.4g</div><div class="l">인공감미료</div></div>
+          </div>
+        </div>
+        <div class="section-title" style="margin-top:8px;">오늘의 기록</div>
+        <div id="logList"></div>
+        <button class="add-log-btn" onclick="goScreen('scan')">+ 분석해서 기록 추가</button>
+        <div class="section-title">이번 주 추세</div>
+        <div style="margin: 0 16px; background: white; border-radius: 16px; padding: 16px;">
+          <div style="display:flex; justify-content:space-around; align-items:flex-end; height:120px; padding-top:8px;" id="weekChart"></div>
+          <div style="display:flex; justify-content:space-around; margin-top:8px; font-size:10px; color:#95a5b5;">
+            <span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span><span>일</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- COMMUNITY -->
+      <div class="screen" id="screen-community">
+        <div class="header"><h2>커뮤니티</h2></div>
+        <div class="community-tabs">
+          <div class="ctab active" onclick="filterCommunity(this, 'all')">전체</div>
+          <div class="ctab" onclick="filterCommunity(this, 'review')">제품 리뷰</div>
+          <div class="ctab" onclick="filterCommunity(this, 'side')">부작용 후기</div>
+          <div class="ctab" onclick="filterCommunity(this, 'tip')">저당 꿀팁</div>
+          <div class="ctab" onclick="filterCommunity(this, 'qna')">Q&A</div>
+        </div>
+        <div id="communityList"></div>
+        <button class="add-log-btn" style="margin-top:8px;">✏️ 글쓰기</button>
+      </div>
+
+      <!-- MY -->
+      <div class="screen" id="screen-my">
+        <div class="profile-head">
+          <div class="big-avatar">조</div>
+          <div class="name">조이</div>
+          <div class="joined">로우앤프리와 함께한 지 14일째 🎉</div>
+        </div>
+        <div class="stat-cards">
+          <div class="c"><div class="n">23</div><div class="l">분석한 제품</div></div>
+          <div class="c"><div class="n">14</div><div class="l">기록한 일수</div></div>
+          <div class="c"><div class="n">6</div><div class="l">발견한 감미료</div></div>
+        </div>
+        <div class="section-title" style="margin: 8px 16px 8px;">설정</div>
+        <div class="menu-list">
+          <div class="menu-item">
+            <div class="icon-circle">⚖️</div>
+            <div class="text">개인 정보 (체중·성별)</div>
+            <div class="arrow">›</div>
+          </div>
+          <div class="menu-item">
+            <div class="icon-circle">🎯</div>
+            <div class="text">일일 목표 설정</div>
+            <div class="arrow">›</div>
+          </div>
+          <div class="menu-item">
+            <div class="icon-circle">🔔</div>
+            <div class="text">알림 설정</div>
+            <div class="arrow">›</div>
+          </div>
+        </div>
+        <div class="section-title" style="margin: 16px 16px 8px;">앱 정보</div>
+        <div class="menu-list" style="margin-bottom: 16px;">
+          <div class="menu-item">
+            <div class="icon-circle">📖</div>
+            <div class="text">감미료 백과 사용 가이드</div>
+            <div class="arrow">›</div>
+          </div>
+          <div class="menu-item" onclick="goScreen('sources')">
+            <div class="icon-circle">🛡️</div>
+            <div class="text">데이터 출처 (식약처 · WHO 등)</div>
+            <div class="arrow">›</div>
+          </div>
+          <div class="menu-item">
+            <div class="icon-circle">💌</div>
+            <div class="text">의견 보내기</div>
+            <div class="arrow">›</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DATA SOURCES -->
+      <div class="screen" id="screen-sources">
+        <div class="header">
+          <button class="back-btn" onclick="goScreen('my')">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          </button>
+          <h2>데이터 출처</h2>
+        </div>
+        <div style="padding: 0 16px 16px;">
+          <div style="background: linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%); color: white; padding: 18px; border-radius: 16px; margin-bottom: 16px;">
+            <div style="font-size: 13px; font-weight: 700; margin-bottom: 6px;">📚 신뢰할 수 있는 정보를 위해</div>
+            <div style="font-size: 11px; line-height: 1.6; opacity: 0.95;">
+              로우앤프리는 국내외 공인 기관의 자료를 바탕으로 정보를 정리합니다. 모든 감미료 항목에는 인용 출처를 명시하고 있어요.
+            </div>
+          </div>
+
+          <div style="background: white; border-radius: 16px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+            <div style="font-size: 14px; font-weight: 700; margin-bottom: 10px;">🇰🇷 국내 공인 자료</div>
+            <ul class="src-list">
+              <li><b>식품의약품안전처(MFDS) 식품첨가물공전</b> — 한국 내 사용 허가, ADI, 한글 명칭/이명 1차 자료</li>
+              <li><b>식품안전나라 OpenAPI</b> (data.go.kr) — 식품영양성분, 첨가물 정보</li>
+              <li><b>식품의약품안전평가원(NIFDS)</b> — 안전성 평가 보고서</li>
+              <li><b>대한당뇨병학회 진료지침</b> — 혈당 관련 가이드라인</li>
+              <li><b>대한지방간학회 임상진료지침</b> — 과당·간 건강</li>
+              <li><b>한국영양학회 한국인 영양소 섭취기준</b></li>
+              <li><b>대한소아과학회</b> — 영아 영양 가이드라인</li>
+            </ul>
+          </div>
+
+          <div style="background: white; border-radius: 16px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+            <div style="font-size: 14px; font-weight: 700; margin-bottom: 10px;">🌍 국제 공인 자료</div>
+            <ul class="src-list">
+              <li><b>JECFA (FAO/WHO 합동식품첨가물전문가위원회)</b> — 국제 ADI 기준</li>
+              <li><b>WHO Sugars Intake Guideline (2015)</b> — 일일 첨가당 25g 권고</li>
+              <li><b>EFSA (유럽식품안전청)</b> — 재평가 보고서</li>
+              <li><b>US FDA GRAS Notice DB & 21 CFR</b> — 미국 안전성 등급</li>
+              <li><b>IARC Monographs</b> — 발암물질 분류 (2023 아스파탐 2B군)</li>
+              <li><b>Health Canada</b> — 캐나다 식품첨가물 평가</li>
+            </ul>
+          </div>
+
+          <div style="background: white; border-radius: 16px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+            <div style="font-size: 14px; font-weight: 700; margin-bottom: 10px;">📖 학술 논문</div>
+            <ul class="src-list">
+              <li>PubMed 등재 임상시험·메타분석 논문</li>
+              <li>Lancet Oncology, Nature Medicine, Am J Clin Nutr, BMJ 등</li>
+              <li>주요 인용 논문은 각 감미료 상세 페이지의 "출처" 섹션 참조</li>
+            </ul>
+          </div>
+
+          <div style="background: #fff8d6; border-radius: 16px; padding: 16px; margin-bottom: 12px; border: 1px solid #f0d674;">
+            <div style="font-size: 13px; font-weight: 700; color: #8b6914; margin-bottom: 8px;">⚠️ 의학적 면책 조항</div>
+            <div style="font-size: 11px; color: #8b6914; line-height: 1.6;">
+              본 앱이 제공하는 모든 정보는 일반적인 안전 기준에 대한 <b>참고 정보</b>이며, 의학적 조언을 대체하지 않습니다. 임신·수유 중이거나 지병이 있다면 반드시 의사·약사와 상담하세요.<br><br>
+              앱은 사용자의 신체 정보(체중·성별·임신 여부·질환)를 바탕으로 권장량을 임의로 변경하지 않습니다. 이는 의학적 책임을 회피하기 위한 의도적 설계입니다.
+            </div>
+          </div>
+
+          <div style="background: white; border-radius: 16px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+            <div style="font-size: 14px; font-weight: 700; margin-bottom: 10px;">🔄 데이터 업데이트 주기</div>
+            <ul class="src-list">
+              <li><b>식약처 OpenAPI</b> — 매일 자동 동기화</li>
+              <li><b>JECFA / EFSA / FDA 평가서</b> — 분기별 검토 및 업데이트</li>
+              <li><b>학술 논문</b> — 월간 모니터링, 중요 변경 시 즉시 반영</li>
+              <li><b>변경 이력</b> — 평가가 변경되면 사용자에게 알림</li>
+            </ul>
+          </div>
+
+          <p style="text-align: center; font-size: 10px; color: #95a5b5; padding: 16px 0; line-height: 1.6;">
+            마지막 업데이트: 2026년 5월<br>
+            오류 제보 환영합니다. 마이 → 의견 보내기
+          </p>
+        </div>
+      </div>
+
+      <!-- Scanning overlay -->
+      <div class="scanning-overlay hidden" id="scanningOverlay">
+        <div class="scanner"></div>
+        <div class="msg" id="scanMsg">원재료를 분석 중이에요</div>
+        <div class="sub" id="scanSub">감미료 27종 데이터베이스와 매칭하고 있어요…</div>
+      </div>
+
+      <!-- Bottom tabs -->
+      <div class="tab-bar">
+        <div class="tab active" data-tab="home" onclick="goScreen('home')">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+          <span>홈</span>
+        </div>
+        <div class="tab" data-tab="tracker" onclick="goScreen('tracker')">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 3v18h18M7 14l4-4 4 4 5-5"/></svg>
+          <span>기록</span>
+        </div>
+        <div class="tab center" data-tab="scan" onclick="goScreen('scan')">
+          <div class="scan-btn">
+            <svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M21 7V5a2 2 0 0 0-2-2h-2M3 17v2a2 2 0 0 0 2 2h2M21 17v2a2 2 0 0 1-2 2h-2M7 12h10"/></svg>
+          </div>
+          <span>스캔</span>
+        </div>
+        <div class="tab" data-tab="community" onclick="goScreen('community')">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg>
+          <span>커뮤니티</span>
+        </div>
+        <div class="tab" data-tab="my" onclick="goScreen('my')">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span>마이</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================== SWEETENER DATABASE (27종) ================== */
+const SWEETENERS = [
+  // ===== 인공감미료 =====
+  {
+    id: 'aspartame', name: '아스파탐', nameEn: 'Aspartame', code: 'E951',
+    category: 'artificial', safety: 'caution',
+    aliases: ['아스파탐', 'aspartame', 'L-aspartyl-L-phenylalanine', '페닐알라닌 함유'],
+    sweetness: 200, kcal: 4, gi: 0,
+    adi: '40 mg/kg 체중',
+    adiNumber: 40,
+    desc: '설탕보다 200배 단맛을 내는 대표 인공감미료. 다이어트 음료, 무설탕 껌에 광범위하게 사용됩니다.',
+    sideEffects: [
+      '😣 민감한 분은 두통이나 어지러움을 느낄 수 있어요.',
+      '🚫 페닐케톤뇨증(PKU)이 있다면 절대 섭취하면 안 돼요. (라벨에 "페닐알라닌 함유" 표기 필수)',
+      '⚠️ 2023년 WHO 산하 IARC가 "발암 가능물질(2B군)"로 분류했어요. 과량 섭취는 피하는 게 좋아요.',
+      '🦠 매일 다량 섭취 시 장내 유익균이 줄어들 수 있다는 연구가 있어요.'
+    ],
+    guide: '체중 60kg 성인 기준 하루 2,400mg(콜라 제로 약 12캔)까지가 ADI 한도. 다만 IARC 분류 이후 가급적 줄이는 걸 권장해요.',
+    whereUsed: '코카콜라 제로, 펩시 제로, 무설탕 껌, 다이어트 시럽, 저칼로리 요거트',
+    icon: '🥤',
+    sources: [
+      '식약처 식품첨가물공전 (감미료 항)',
+      'JECFA, WHO Food Additives Series 15 (1981) — ADI 40 mg/kg',
+      'IARC Monograph Vol.134 / Lancet Oncology, 2023 — 2B군 분류',
+      'EFSA Scientific Opinion on Aspartame, 2013'
+    ]
+  },
+  {
+    id: 'sucralose', name: '수크랄로스', nameEn: 'Sucralose', code: 'E955',
+    category: 'artificial', safety: 'caution',
+    aliases: ['수크랄로스', 'sucralose'],
+    sweetness: 600, kcal: 0, gi: 0,
+    adi: '5 mg/kg 체중',
+    adiNumber: 5,
+    desc: '설탕 분자를 화학적으로 변형해 만든 감미료. 열에 안정적이라 베이킹용으로도 사용됩니다.',
+    sideEffects: [
+      '🔥 베이킹할 때 120°C 이상에서 오래 가열하면 유해물질이 생길 수 있어요. 굽는 단계에서는 사용 자제!',
+      '🦠 장내 유익균이 줄어들 수 있다는 동물 연구가 있어요.',
+      '💉 인슐린 감수성에 변화를 줄 수 있다는 일부 연구가 있어요. (당뇨인 분은 신중히)',
+      '😖 드물지만 민감한 분은 편두통을 느낄 수 있어요.'
+    ],
+    guide: '체중 60kg 성인 기준 하루 300mg 이내. 베이킹 시 120°C 이상 장시간 가열은 피하세요.',
+    whereUsed: '스플렌다, 다이어트 음료, 무설탕 디저트, 단백질 보충제',
+    icon: '🍰',
+    sources: [
+      '식약처 식품첨가물공전',
+      'JECFA WHO TRS 868 (1990) — ADI 15 mg/kg → 후속 평가에서 5 mg/kg 적용',
+      'EFSA, 2000 / FDA Final Rule 21 CFR §172.831',
+      'Schiffman et al., J Toxicol Environ Health, 2013 — 가열 분해'
+    ]
+  },
+  {
+    id: 'acesulfame-k', name: '아세설팜칼륨', nameEn: 'Acesulfame-K', code: 'E950',
+    category: 'artificial', safety: 'caution',
+    aliases: ['아세설팜칼륨', '아세설팜k', 'acesulfame', 'acesulfame-k'],
+    sweetness: 200, kcal: 0, gi: 0,
+    adi: '15 mg/kg 체중',
+    adiNumber: 15,
+    desc: '아스파탐, 수크랄로스와 자주 혼합 사용되는 인공감미료. 약간의 쓴맛이 있어 다른 감미료와 함께 사용됩니다.',
+    sideEffects: [
+      '🦠 매일 섭취 시 장내 유익균 비율이 변할 수 있어요.',
+      '😣 한 번에 많이 섭취하면 두통을 느끼는 분이 있어요.',
+      '🐭 동물 실험에서 갑상선 영향이 보고됐지만, 일반 식품 노출량에서는 영향이 미미해요.',
+      '🤐 끝맛이 살짝 쓰게 느껴질 수 있어요.'
+    ],
+    guide: '체중 60kg 성인 기준 하루 900mg 이내. 보통 다른 감미료와 혼합되어 사용돼요.',
+    whereUsed: '제로 사이다, 다이어트 츄잉검, 단백질 바, 무설탕 시리얼',
+    icon: '🍬',
+    sources: [
+      '식약처 식품첨가물공전',
+      'JECFA WHO TRS 776 (1989) — ADI 15 mg/kg',
+      'EFSA, 2010 재평가',
+      'Bian et al., Front Microbiol, 2017 — 장내 미생물 영향'
+    ]
+  },
+  {
+    id: 'saccharin', name: '사카린', nameEn: 'Saccharin', code: 'E954',
+    category: 'artificial', safety: 'caution',
+    aliases: ['사카린', '사카린나트륨', 'saccharin'],
+    sweetness: 300, kcal: 0, gi: 0,
+    adi: '5 mg/kg 체중',
+    adiNumber: 5,
+    desc: '가장 오래된 인공감미료(1879년 발견). 한국에서는 김치, 단무지에 흔히 사용됩니다.',
+    sideEffects: [
+      '🤐 끝맛이 살짝 쓰거나 금속 맛으로 느껴질 수 있어요.',
+      'ℹ️ 과거 방광암 우려가 있었지만, 2000년대 이후 인체에는 해당되지 않는 것으로 정정됐어요.',
+      '🦠 매일 섭취 시 장내 유익균이 줄 수 있다는 연구가 있어요.',
+      '🤰 임산부·영유아 식품에는 한국에서 사용이 제한돼요.'
+    ],
+    guide: '체중 60kg 성인 기준 하루 300mg 이내. 식약처는 영유아·임산부 식품에서는 사용을 제한해요.',
+    whereUsed: '단무지, 김치, 빙수 시럽, 일부 다이어트 음료',
+    icon: '🥒',
+    sources: [
+      '식약처 식품첨가물공전 (사용 제한 항목 명시)',
+      'JECFA, 1993 — ADI 5 mg/kg',
+      'NTP Report on Carcinogens, 2000 — 발암물질 목록 제외',
+      'Suez et al., Nature, 2014 — 장내미생물 영향'
+    ]
+  },
+  {
+    id: 'neotame', name: '네오탐', nameEn: 'Neotame', code: 'E961',
+    category: 'artificial', safety: 'warning',
+    aliases: ['네오탐', 'neotame'],
+    sweetness: 8000, kcal: 0, gi: 0,
+    adi: '2 mg/kg 체중',
+    adiNumber: 2,
+    desc: '아스파탐의 변형으로 설탕보다 7,000~13,000배 더 단맛. 매우 적은 양만 사용됩니다.',
+    sideEffects: [
+      '🦠 동물 연구에서 장 점막에 손상을 줄 수 있다는 보고가 있어요.',
+      '😣 두통이나 어지러움을 느낄 수 있어요.',
+      '📚 비교적 새로운 물질이라 장기 데이터가 충분하지 않아요.'
+    ],
+    guide: '체중 60kg 성인 기준 하루 120mg 이내. 실제 식품엔 워낙 미량만 들어있어 ADI 초과는 드물어요.',
+    whereUsed: '저칼로리 음료, 요리용 감미료',
+    icon: '🧪',
+    sources: [
+      '식약처 식품첨가물공전',
+      'JECFA, 2007 — ADI 2 mg/kg',
+      'EFSA, 2007 / FDA Final Rule, 2002',
+      'Shil & Chichger, Front Nutr, 2018 — 장 점막 영향'
+    ]
+  },
+  {
+    id: 'cyclamate', name: '시클라메이트', nameEn: 'Cyclamate', code: 'E952',
+    category: 'artificial', safety: 'warning',
+    aliases: ['시클라메이트', 'cyclamate', 'cyclamic acid'],
+    sweetness: 30, kcal: 0, gi: 0,
+    adi: '7 mg/kg 체중',
+    adiNumber: 7,
+    desc: '한국에서는 사용 금지(식약처). 일부 해외 제품에 포함되어 있어 직구 시 주의.',
+    sideEffects: [
+      '🚫 한국과 미국에서 식품 사용이 금지된 감미료예요.',
+      '🐭 방광 종양을 유발한 동물 연구가 있었어요.',
+      '📦 해외 직구 다이어트 음료·시럽에 들어있을 수 있어요. 라벨 꼭 확인!'
+    ],
+    guide: '한국에서는 식품 사용 금지. 해외 직구 제품 라벨을 꼭 확인하고 피하세요.',
+    whereUsed: '해외 일부 다이어트 음료, 시럽 (한국 미허가)',
+    icon: '🚫',
+    sources: [
+      '식약처 식품첨가물공전 (사용 금지)',
+      'US FDA, 1969 — 사용 금지',
+      'JECFA, 1982 — 다른 국가 ADI 7 mg/kg',
+      'IARC Monograph Vol.73, 1999'
+    ]
+  },
+  {
+    id: 'advantame', name: '어드밴탐', nameEn: 'Advantame', code: 'E969',
+    category: 'artificial', safety: 'safe',
+    aliases: ['어드밴탐', 'advantame'],
+    sweetness: 20000, kcal: 0, gi: 0,
+    adi: '5 mg/kg 체중',
+    adiNumber: 5,
+    desc: '아스파탐 계열의 신형 감미료. 매우 강한 단맛으로 극소량만 사용됩니다.',
+    sideEffects: [
+      '📚 비교적 신물질이라 장기 안전성 데이터가 충분히 쌓이지 않았어요.',
+      '✅ 실제 식품 사용량이 워낙 적어 부작용 보고는 드물어요.',
+      '🚫 아스파탐 계열이지만 페닐알라닌이 거의 방출되지 않아 PKU 환자도 비교적 안전.'
+    ],
+    guide: '체중 60kg 성인 기준 하루 300mg 이내. 실제 식품에서 노출량은 매우 낮아요.',
+    whereUsed: '제과·제빵, 요리용 감미료(국내 사용 드뭄)',
+    icon: '✨',
+    sources: [
+      '식약처 식품첨가물공전',
+      'JECFA, 2014 — ADI 5 mg/kg',
+      'FDA GRAS Notice GRN 477 (2014)',
+      'EFSA Scientific Opinion, 2013'
+    ]
+  },
+
+  // ===== 당알코올 =====
+  {
+    id: 'erythritol', name: '에리스리톨', nameEn: 'Erythritol', code: 'E968',
+    category: 'sugar-alcohol', safety: 'safe',
+    aliases: ['에리스리톨', 'erythritol'],
+    sweetness: 0.7, kcal: 0.2, gi: 0,
+    adi: '제한 없음 (일반적으로 안전)',
+    adiNumber: null,
+    desc: '옥수수 발효로 만드는 천연 당알코올. 칼로리가 거의 없고 혈당에 영향이 적어 저당 제품에 인기.',
+    sideEffects: [
+      '💨 한 번에 많이(50g↑) 드시면 가스가 차거나 배가 더부룩할 수 있어요.',
+      '🚽 30~50g 초과 시 묽은 변·설사가 올 수 있으니 천천히 양 늘리세요.',
+      '❤️ 2023년 Nature Medicine 연구에서 혈전 위험 가능성이 제기됐어요. 심혈관 질환자는 신중히. (논쟁 중)',
+      '✅ 다른 당알코올보다 흡수율이 높아 위장 부담이 적은 편이에요.'
+    ],
+    guide: '하루 30g 이내가 무난해요. 처음 드시는 분은 10g 정도부터 천천히 늘려보세요.',
+    whereUsed: '제로 콜라(에리스리톨 버전), 저당 디저트, 키토 제품, 단백질 바',
+    icon: '🌽',
+    sources: [
+      '식약처 식품첨가물공전',
+      'JECFA, 1999 — ADI "not specified" (제한 없음)',
+      'FDA GRAS Notice GRN 76, 1997',
+      'Witkowski et al., Nature Medicine, 2023 — 심혈관 위험 가능성'
+    ]
+  },
+  {
+    id: 'xylitol', name: '자일리톨', nameEn: 'Xylitol', code: 'E967',
+    category: 'sugar-alcohol', safety: 'caution',
+    aliases: ['자일리톨', 'xylitol'],
+    sweetness: 1, kcal: 2.4, gi: 7,
+    adi: '제한 없음',
+    adiNumber: null,
+    desc: '자작나무 추출 당알코올. 충치 예방 효과로 껌·치약에 활용됩니다.',
+    sideEffects: [
+      '💨 20g 이상 한 번에 드시면 가스가 차고 묽은 변이 올 수 있어요.',
+      '🐶 반려견·고양이에게는 극소량으로도 치명적이에요. 절대 주지 마세요!',
+      '🤢 민감한 분은 10g만 드셔도 속이 불편할 수 있어요.',
+      '🦷 충치균이 분해하지 못해 충치 예방 효과가 있어요. (장점!)'
+    ],
+    guide: '하루 50g 이내. 반려동물 손이 닿지 않는 곳에 보관하세요.',
+    whereUsed: '자일리톨 껌, 치약, 무설탕 사탕, 저당 초콜릿',
+    icon: '🌳',
+    sources: [
+      '식약처 식품첨가물공전',
+      'JECFA, 1983 — ADI "not specified"',
+      'EFSA, 1985',
+      'Mäkinen, Int J Dent, 2010 — 충치 예방 효과',
+      'AVMA Pet Toxicology — 반려동물 독성'
+    ]
+  },
+  {
+    id: 'maltitol', name: '말티톨', nameEn: 'Maltitol', code: 'E965',
+    category: 'sugar-alcohol', safety: 'caution',
+    aliases: ['말티톨', 'maltitol'],
+    sweetness: 0.9, kcal: 2.1, gi: 36,
+    adi: '제한 없음',
+    adiNumber: null,
+    desc: '맥아당에서 만든 당알코올. 식감이 설탕과 비슷해 무설탕 초콜릿에 자주 사용됩니다.',
+    sideEffects: [
+      '📈 GI지수 36으로 당알코올 중에서는 높은 편! 혈당에 영향이 있어요.',
+      '💨 소화 장애가 흔해요. 가스가 차거나 묽은 변이 올 수 있어요.',
+      '🤢 민감한 분은 10g 이상 드시면 증상이 시작될 수 있어요.',
+      '🍫 "무설탕 초콜릿" 한 봉지 다 드시면 화장실 직행할 수 있으니 주의!'
+    ],
+    guide: '하루 30g 이내. 당뇨가 있다면 GI지수를 고려해 신중히 드세요.',
+    whereUsed: '무설탕 초콜릿, 저당 쿠키, 단백질 바',
+    icon: '🍫',
+    sources: [
+      '식약처 식품첨가물공전',
+      'JECFA, 1993 — ADI "not specified"',
+      'EFSA, 2011',
+      'Livesey, Nutr Res Rev, 2003 — GI 영향'
+    ]
+  },
+  {
+    id: 'sorbitol', name: '소르비톨', nameEn: 'Sorbitol', code: 'E420',
+    category: 'sugar-alcohol', safety: 'caution',
+    aliases: ['소르비톨', 'sorbitol'],
+    sweetness: 0.6, kcal: 2.6, gi: 9,
+    adi: '제한 없음',
+    adiNumber: null,
+    desc: '과일에 자연 함유된 당알코올. 보습 효과로 화장품에도 활용.',
+    sideEffects: [
+      '🚽 10g만 드셔도 묽은 변이 올 수 있어요. (변비약 효과!)',
+      '💨 가스가 차고 배가 빵빵해질 수 있어요.',
+      '🥺 과민성대장증후군(IBS)이 있다면 절대 피하세요. 증상 폭발 가능.',
+      '🍽️ 저포드맵(FODMAP) 식단 회피 항목이에요.'
+    ],
+    guide: '하루 20g 이내. 장 트러블 자주 있다면 5g 이내로 시작하세요.',
+    whereUsed: '무설탕 껌, 시럽 의약품, 보습 화장품, 잼',
+    icon: '🍑',
+    sources: [
+      '식약처 식품첨가물공전',
+      'JECFA, 1982 — ADI "not specified"',
+      'EFSA, 2014',
+      'Monash University FODMAP Diet Guidelines'
+    ]
+  },
+  {
+    id: 'mannitol', name: '만니톨', nameEn: 'Mannitol', code: 'E421',
+    category: 'sugar-alcohol', safety: 'caution',
+    aliases: ['만니톨', 'mannitol'],
+    sweetness: 0.5, kcal: 1.6, gi: 0,
+    adi: '제한 없음',
+    adiNumber: null,
+    desc: '버섯·해조류에 함유된 당알코올. 의약품 부형제로도 사용.',
+    sideEffects: [
+      '🚽 20g 이상 드시면 강한 설사가 올 수 있어요. (의료용으로 변비 유도제로도 쓰임!)',
+      '💨 가스와 복부 팽만이 흔해요.',
+      '💧 의약품(주사) 형태는 신부전 환자에게 주의가 필요해요.'
+    ],
+    guide: '식품에서는 하루 20g 이내. 일반적인 가공식품의 사용량은 적은 편이에요.',
+    whereUsed: '무설탕 사탕, 의약품 정제',
+    icon: '🍄',
+    sources: [
+      '식약처 식품첨가물공전',
+      'JECFA, 1986 — ADI "not specified"',
+      'EFSA, 2018',
+      'Mishra et al., Drug Discov Today, 2018 — 의약품 부형제'
+    ]
+  },
+  {
+    id: 'lactitol', name: '락티톨', nameEn: 'Lactitol', code: 'E966',
+    category: 'sugar-alcohol', safety: 'caution',
+    aliases: ['락티톨', 'lactitol'],
+    sweetness: 0.4, kcal: 2, gi: 6,
+    adi: '제한 없음',
+    adiNumber: null,
+    desc: '유당에서 만든 당알코올. 변비약 성분으로도 활용.',
+    sideEffects: [
+      '🚽 20g 이상 드시면 설사 가능. 실제로 변비약 성분으로도 쓰여요!',
+      '💨 가스와 복부 팽만이 올 수 있어요.',
+      '🥛 유당불내증이 있어도 비교적 안전하지만, 일부는 반응할 수 있어요.'
+    ],
+    guide: '하루 20g 이내. 변비 있는 분에겐 오히려 도움될 수 있지만 양 조절 필수.',
+    whereUsed: '무설탕 초콜릿, 변비 완화제',
+    icon: '🥛',
+    sources: [
+      '식약처 식품첨가물공전',
+      'JECFA, 1983 — ADI "not specified"',
+      'EFSA, 2015',
+      'FDA, 2020 — 만성 변비 치료제 승인 (Pizensy)'
+    ]
+  },
+  {
+    id: 'isomalt', name: '이소말트', nameEn: 'Isomalt', code: 'E953',
+    category: 'sugar-alcohol', safety: 'caution',
+    aliases: ['이소말트', 'isomalt'],
+    sweetness: 0.5, kcal: 2, gi: 9,
+    adi: '제한 없음',
+    adiNumber: null,
+    desc: '설탕에서 만든 당알코올. 캔디 공예에 자주 사용 (설탕처럼 가공 가능).',
+    sideEffects: [
+      '💨 20g 이상 드시면 가스가 차고 배가 더부룩할 수 있어요.',
+      '🚽 묽은 변·설사 가능.',
+      '🍭 다른 당알코올보다 흡수가 느려서 증상이 늦게 올 수 있어요.'
+    ],
+    guide: '하루 25g 이내. 사탕 1~2개 정도면 안전한 양이에요.',
+    whereUsed: '무설탕 사탕, 슈가크래프트 공예, 디저트 토핑',
+    icon: '🍭',
+    sources: [
+      '식약처 식품첨가물공전',
+      'JECFA, 1985 — ADI "not specified"',
+      'EFSA, 1984',
+      'Sentko & Willibald-Ettle, Food Sci, 2012'
+    ]
+  },
+
+  // ===== 천연 대체당 =====
+  {
+    id: 'stevia', name: '스테비아', nameEn: 'Stevia', code: 'E960',
+    category: 'natural-substitute', safety: 'safe',
+    aliases: ['스테비아', '효소처리스테비아', 'stevia', 'steviol glycoside', '레바우디오사이드'],
+    sweetness: 250, kcal: 0, gi: 0,
+    adi: '4 mg/kg 체중 (스테비올 기준)',
+    adiNumber: 4,
+    desc: '남미산 스테비아 식물 잎에서 추출한 천연 감미료. 혈당과 칼로리에 영향 없음.',
+    sideEffects: [
+      '🤐 특유의 쓴 끝맛이 느껴질 수 있어요. (개인차 큼)',
+      '🤧 드물게 국화과 알레르기가 있는 분은 알레르기 반응이 올 수 있어요.',
+      '💨 한 번에 많이 드시면 살짝 배가 불편할 수 있어요.',
+      '💊 혈압약 복용 중이라면 혈압이 더 떨어질 수 있어요. 의사와 상담하세요.'
+    ],
+    guide: '체중 60kg 성인 기준 하루 240mg(스테비올) 이내. 보통 음료 1~2캔으로는 충분히 안전해요.',
+    whereUsed: '제로 사이다(스테비아 버전), 천연 감미 음료, 다이어트 차',
+    icon: '🌿',
+    sources: [
+      '식약처 식품첨가물공전 (효소처리스테비아 포함)',
+      'JECFA, 2008 — ADI 4 mg/kg (스테비올 기준)',
+      'EFSA, 2010',
+      'FDA GRAS Notice (Reb A 등) 2008~'
+    ]
+  },
+  {
+    id: 'allulose', name: '알룰로스', nameEn: 'Allulose', code: '',
+    category: 'natural-substitute', safety: 'safe',
+    aliases: ['알룰로스', 'allulose', 'd-알룰로스', 'd-allulose', '알루로오스'],
+    sweetness: 0.7, kcal: 0.4, gi: 0,
+    adi: '제한 없음 (일반적으로 안전)',
+    adiNumber: null,
+    desc: '무화과·건포도에 미량 존재하는 희소당. 한국이 세계 시장을 선도하며 설탕 대체로 인기.',
+    sideEffects: [
+      '💨 하루 50g 이상 드시면 배가 빵빵해지고 가스가 찰 수 있어요.',
+      '🚽 체중 1kg당 0.4g(60kg 성인 24g)을 넘기면 묽은 변이 올 수 있어요.',
+      '🏷️ 시럽 형태는 다른 당과 혼합된 경우가 있어요. 라벨 꼭 확인!',
+      '✅ 인슐린·혈당 반응이 거의 없어 당뇨인에게도 비교적 안전해요.'
+    ],
+    guide: '체중 60kg 성인 기준 하루 24g 이내. 처음엔 10g부터 천천히 늘려보세요.',
+    whereUsed: '알룰로스 시럽, 저당 케이크, 제로 카페 음료',
+    icon: '🍯',
+    sources: [
+      '식약처 (2020 식품원료 인정)',
+      'FDA GRAS Notice GRN 498, 647',
+      'Han et al., Nutrients, 2020 — 위장관 내성 연구',
+      '대한당뇨병학회 학술지 — 혈당 영향 평가'
+    ]
+  },
+  {
+    id: 'monkfruit', name: '나한과 (몽크프루트)', nameEn: 'Monk Fruit', code: '',
+    category: 'natural-substitute', safety: 'safe',
+    aliases: ['나한과', '몽크프루트', 'monk fruit', 'luo han guo', 'mogroside'],
+    sweetness: 200, kcal: 0, gi: 0,
+    adi: '제한 없음',
+    adiNumber: null,
+    desc: '중국 전통 약재 박과 식물. 모그로사이드 성분으로 강한 단맛.',
+    sideEffects: [
+      '👃 특유의 박과 향이 호불호가 있어요.',
+      '🤧 드물게 박과 알레르기가 있는 분은 주의하세요.',
+      '✅ 부작용 보고가 매우 적은 안전한 감미료예요.',
+      '💸 다른 감미료보다 가격이 비싼 편이에요.'
+    ],
+    guide: '일반적으로 매우 안전한 편. 식약처 별도 일일 섭취량 제한이 없어요.',
+    whereUsed: '키토 디저트, 천연 감미 음료, 베이킹 시럽',
+    icon: '🍈',
+    sources: [
+      'FDA GRAS Notice GRN 301 (2010)',
+      'Health Canada, 2018',
+      'JECFA Monograph 23 (2019)',
+      'Pawar et al., J Food Sci, 2013'
+    ]
+  },
+  {
+    id: 'tagatose', name: '타가토스', nameEn: 'Tagatose', code: '',
+    category: 'natural-substitute', safety: 'safe',
+    aliases: ['타가토스', 'tagatose', 'd-타가토스'],
+    sweetness: 0.92, kcal: 1.5, gi: 3,
+    adi: '제한 없음',
+    adiNumber: null,
+    desc: '유당에서 만든 희소당. 설탕과 매우 유사한 맛이 특징.',
+    sideEffects: [
+      '💨 20g 이상 한 번에 드시면 가스가 차고 배가 불편할 수 있어요.',
+      '✅ 소량 섭취 시엔 거의 부작용 없는 편이에요.',
+      '🍯 설탕과 맛이 가장 비슷해서 끝맛 이질감이 적어요.'
+    ],
+    guide: '하루 30g 이내가 무난해요.',
+    whereUsed: '저당 음료, 베이킹 가루, 무설탕 잼',
+    icon: '🥛',
+    sources: [
+      'FDA GRAS Notice GRN 78 (2001)',
+      'JECFA, 2004 — ADI "not specified"',
+      'EFSA, 2005',
+      'Lu et al., J Med Food, 2008'
+    ]
+  },
+  {
+    id: 'trehalose', name: '트레할로스', nameEn: 'Trehalose', code: '',
+    category: 'natural-substitute', safety: 'caution',
+    aliases: ['트레할로스', 'trehalose'],
+    sweetness: 0.45, kcal: 4, gi: 70,
+    adi: '제한 없음',
+    adiNumber: null,
+    desc: '버섯·곡류에 자연 존재. GI지수가 높아 진정한 저당은 아님 → 라벨 주의!',
+    sideEffects: [
+      '📈 GI지수 70(설탕과 유사). "천연"이라고 저당이 아니에요!',
+      '🔥 칼로리도 설탕(4kcal/g)과 동일해요.',
+      '🚽 트레할로스 분해효소가 부족한 분은 설사가 올 수 있어요.',
+      '🦠 일부 연구에서 C.difficile 장내 감염과의 연관 보고가 있어요. (논쟁 중)'
+    ],
+    guide: '"천연 단맛" 표시에 속지 마세요. GI지수 70으로 거의 설탕 수준이에요.',
+    whereUsed: '제과·제빵 보존제, 일부 떡·젤리, 화장품',
+    icon: '🌾',
+    sources: [
+      '식약처 식품원료',
+      'JECFA, 2000 — ADI "not specified"',
+      'FDA GRAS Notice GRN 45',
+      'Collins et al., Nature, 2018 — 장내 감염 가설'
+    ]
+  },
+
+  // ===== 천연당류 =====
+  {
+    id: 'fructose', name: '과당', nameEn: 'Fructose', code: '',
+    category: 'natural-sugar', safety: 'caution',
+    aliases: ['과당', 'fructose'],
+    sweetness: 1.7, kcal: 4, gi: 19,
+    adi: '하루 25g 이내 권장 (WHO)',
+    adiNumber: null,
+    desc: '과일·꿀에 함유된 천연 당. GI지수는 낮으나 간 대사를 거쳐 지방으로 변환 쉬움.',
+    sideEffects: [
+      '🫀 과량 섭취 시 비알코올성 지방간 위험이 높아져요.',
+      '💨 과당 흡수 장애가 있는 분은 가스·복부 팽만이 심할 수 있어요. (FODMAP)',
+      '💉 인슐린 저항성을 악화시킬 수 있어요.',
+      '🦴 요산이 올라가 통풍 위험 증가.',
+      '🍎 과일 자체는 식이섬유와 함께 들어 있어 비교적 안전해요!'
+    ],
+    guide: 'WHO 기준 첨가당 25g 이내. 가공식품 속 과당과 과일 속 과당은 다르게 작용해요.',
+    whereUsed: '꿀, 과일, 시럽 음료, 가공 음료',
+    icon: '🍎',
+    sources: [
+      'WHO Sugars Intake Guideline, 2015',
+      '대한지방간학회 가이드라인, 2021',
+      'Stanhope et al., J Clin Invest, 2009 — 인슐린 저항성',
+      'Choi & Curhan, BMJ, 2008 — 통풍 위험'
+    ]
+  },
+  {
+    id: 'hfcs', name: '액상과당', nameEn: 'HFCS (High Fructose Corn Syrup)', code: '',
+    category: 'natural-sugar', safety: 'warning',
+    aliases: ['액상과당', '고과당옥수수시럽', 'hfcs', 'high fructose corn syrup', '고과당콘시럽'],
+    sweetness: 1.2, kcal: 4, gi: 73,
+    adi: '권장 안 함 (가급적 회피)',
+    adiNumber: null,
+    desc: '옥수수 전분에서 만든 시럽. 과당과 포도당 혼합. 가공식품 단맛의 주범.',
+    sideEffects: [
+      '🥤 청량음료 한 캔(355ml)에 약 39g — WHO 하루 한도(25g)를 한 캔에 넘어요.',
+      '😵 식후 혈당 급등 → 30~60분 뒤 무력감·졸음이 오기 쉬워요.',
+      '🍔 식욕 조절 호르몬(렙틴)을 둔하게 만들어 "먹어도 자꾸 더 먹고 싶은" 느낌이 들 수 있어요.',
+      '🍷 매일 다량 섭취 시 비알코올성 지방간 위험이 높아져요. (장기 위험)'
+    ],
+    guide: 'WHO·미국심장협회 모두 회피 권고. 음료/소스/시리얼 라벨에서 가장 자주 보이는 성분이에요.',
+    whereUsed: '청량음료, 시럽 디저트, 가공 소스, 주스 음료',
+    icon: '🥤',
+    sources: [
+      'WHO Sugars Intake Guideline, 2015',
+      '미국심장협회(AHA) Added Sugars Guideline, 2016',
+      '대한지방간학회 임상진료지침, 2021',
+      'Bray et al., Am J Clin Nutr, 2004'
+    ]
+  },
+  {
+    id: 'crystalline-fructose', name: '결정과당', nameEn: 'Crystalline Fructose', code: '',
+    category: 'natural-sugar', safety: 'warning',
+    aliases: ['결정과당', 'crystalline fructose'],
+    sweetness: 1.5, kcal: 4, gi: 19,
+    adi: '권장 안 함',
+    adiNumber: null,
+    desc: '액상과당을 결정화한 형태. 흰 가루 설탕처럼 보이지만 본질은 과당.',
+    sideEffects: [
+      '🏷️ "결정과당"이라 적혀 있어 설탕과 다른 줄 알기 쉬워요. 실상은 액상과당과 같은 과당이에요.',
+      '🍰 베이커리·단백질바에서 "건강한 단맛"으로 광고되지만 칼로리·간 부담 동일.',
+      '💨 과당 흡수 장애가 있는 분은 가스·복부 팽만 발생.',
+      '🍷 매일 다량 시 간 지방 축적. (장기 위험)'
+    ],
+    guide: '액상과당과 동일하게 회피 권고. "결정"과당이라는 이름에 속지 마세요.',
+    whereUsed: '베이커리, 시리얼, 단백질 바, 일부 다이어트 식품(주의)',
+    icon: '❄️',
+    sources: [
+      'WHO Sugars Intake Guideline, 2015',
+      'Bray, Adv Nutr, 2013 — 과당 대사',
+      '대한지방간학회 임상진료지침, 2021'
+    ]
+  },
+  {
+    id: 'sucrose', name: '자당 (설탕)', nameEn: 'Sucrose', code: '',
+    category: 'natural-sugar', safety: 'caution',
+    aliases: ['자당', '설탕', '백설탕', '정제설탕', 'sucrose', 'sugar', '식설탕'],
+    sweetness: 1, kcal: 4, gi: 65,
+    adi: 'WHO 25g/일 (총첨가당)',
+    adiNumber: null,
+    desc: '사탕수수·사탕무에서 추출. 과당+포도당 결합형. 가장 친숙한 단맛의 기준.',
+    sideEffects: [
+      '📈 혈당이 빠르게 올라갔다 떨어져요 → 30~60분 뒤 졸음·피곤함이 올 수 있어요.',
+      '🦷 입안 세균 먹이가 되어 충치 위험.',
+      '🤤 단맛 수용체를 자극해 "단 거 또 땡기는" 의존성이 쉽게 형성돼요.',
+      '🍰 다량 섭취 시 비만·당뇨·고지혈증 위험. (장기)'
+    ],
+    guide: 'WHO 권장 첨가당 25g 이내(티스푼 약 6개). 가공식품 라벨에서 모든 당을 합쳐 25g 이내로.',
+    whereUsed: '거의 모든 가공식품, 디저트, 음료',
+    icon: '🍚',
+    sources: [
+      'WHO Sugars Intake Guideline, 2015',
+      '대한당뇨병학회 진료지침, 2023',
+      '식약처 영양표시 가이드'
+    ]
+  },
+  {
+    id: 'glucose', name: '포도당', nameEn: 'Glucose', code: '',
+    category: 'natural-sugar', safety: 'caution',
+    aliases: ['포도당', 'glucose', '덱스트로스', 'dextrose'],
+    sweetness: 0.7, kcal: 4, gi: 100,
+    adi: '제한 없음(자연 대사)',
+    adiNumber: null,
+    desc: '인체 에너지원. 그러나 첨가물로 섭취 시 GI 100으로 혈당 직격탄.',
+    sideEffects: [
+      '⚡ 흡수가 가장 빨라 먹은 직후 혈당이 즉각 올라가요.',
+      '😴 30~60분 뒤 인슐린이 작동하면서 급격한 졸음·집중력 저하.',
+      '🏃 반대로 운동 직후엔 빠른 에너지 회복용으로 유용해요.',
+      '💉 당뇨가 있다면 혈당 변동성이 매우 커지니 신중히.'
+    ],
+    guide: '운동 직후나 저혈당 응급 외에는 첨가당으로 섭취하지 않는 게 좋아요.',
+    whereUsed: '에너지젤, 스포츠 음료, 사탕, 베이킹',
+    icon: '⚡',
+    sources: [
+      '대한당뇨병학회 가이드라인, 2023',
+      '한국영양학회 한국인 영양소 섭취기준, 2020',
+      'Foster-Powell et al., Am J Clin Nutr, 2002 — GI 표준'
+    ]
+  },
+  {
+    id: 'honey', name: '꿀', nameEn: 'Honey', code: '',
+    category: 'natural-sugar', safety: 'caution',
+    aliases: ['꿀', 'honey', '벌꿀'],
+    sweetness: 1.3, kcal: 3, gi: 55,
+    adi: 'WHO 25g/일',
+    adiNumber: null,
+    desc: '벌이 만든 천연 단맛. 항균 성분 일부 함유하지만 본질은 당.',
+    sideEffects: [
+      '📈 GI 55로 설탕보다 약간 낮지만 혈당은 충분히 올라가요.',
+      '👶 12개월 미만 아기에게는 보툴리누스균 위험! 절대 주지 마세요.',
+      '🤧 꽃가루 알레르기가 있는 분은 입안 가려움·따가움이 올 수 있어요.',
+      '🏷️ 시중 "꿀"이라 표시된 제품에 시럽이 섞여 있는 경우가 있어요. 100% 표기 확인.'
+    ],
+    guide: '하루 25g(티스푼 약 4개) 이내. 12개월 미만 영아 절대 금지.',
+    whereUsed: '베이킹, 차, 토핑',
+    icon: '🍯',
+    sources: [
+      '대한소아과학회 영아 영양 가이드라인',
+      'WHO Sugars Intake Guideline, 2015',
+      '식약처 식품유형별 표시기준'
+    ]
+  },
+  {
+    id: 'maple', name: '메이플시럽', nameEn: 'Maple Syrup', code: '',
+    category: 'natural-sugar', safety: 'caution',
+    aliases: ['메이플시럽', 'maple syrup', '단풍시럽'],
+    sweetness: 1.1, kcal: 3.3, gi: 54,
+    adi: 'WHO 25g/일',
+    adiNumber: null,
+    desc: '단풍나무 수액 농축. 미네랄(망간 등) 함유하지만 90% 이상이 당.',
+    sideEffects: [
+      '📈 90% 이상이 당! "천연"이라도 혈당은 충분히 올라가요.',
+      '🏷️ 일반 슈퍼의 "팬케이크 시럽"은 실제로 액상과당이 주성분인 경우가 많아요. "100% 메이플" 표기 꼭 확인.',
+      '✅ 100% 메이플은 미네랄(망간·아연)이 소량 들어있어 정제설탕보다 약간 나아요.'
+    ],
+    guide: '하루 1~2큰술(15~30g) 이내. 라벨에 "100% 메이플 시럽" 표기 확인.',
+    whereUsed: '팬케이크, 와플, 저당 베이킹(주의)',
+    icon: '🍁',
+    sources: [
+      'WHO Sugars Intake Guideline, 2015',
+      '캐나다 단풍나무시럽 등급 표준 (Grade A 등)',
+      'Phillips et al., J Funct Foods, 2009'
+    ]
+  },
+  {
+    id: 'agave', name: '아가베시럽', nameEn: 'Agave Syrup', code: '',
+    category: 'natural-sugar', safety: 'warning',
+    aliases: ['아가베', '아가베시럽', 'agave', 'agave syrup', '아가베넥타'],
+    sweetness: 1.4, kcal: 3, gi: 17,
+    adi: '권장 안 함 (가급적 회피)',
+    adiNumber: null,
+    desc: '아가베(용설란)에서 추출. GI지수는 낮으나 과당 비율 70~90%로 액상과당과 유사.',
+    sideEffects: [
+      '🏷️ "비건/천연/저GI"라 광고되지만 실제론 액상과당과 거의 같아요.',
+      '📊 GI지수만 낮을 뿐, 과당 비율이 70~90%로 매우 높음.',
+      '💨 과당 흡수 장애가 있는 분은 가스·복부 팽만이 심하게 올 수 있어요.',
+      '🍷 매일 다량 섭취 시 간 지방 축적·인슐린 저항성. (장기)'
+    ],
+    guide: '낮은 GI지수 마케팅에 속지 마세요. 액상과당과 동일하게 취급해 회피 권장.',
+    whereUsed: '비건 베이킹, 천연 표시 디저트, 칵테일',
+    icon: '🌵',
+    sources: [
+      'Bray et al., Adv Nutr, 2013 — 과당 대사',
+      'WHO Sugars Intake Guideline, 2015',
+      '대한지방간학회 임상진료지침, 2021'
+    ]
+  }
+];
+
+/* ================== SAMPLE PRODUCTS (가상) ================== */
+const SAMPLE_PRODUCTS = [
+  {
+    id: 'p1', name: '제로콜라', cat: '탄산음료', icon: '🥤',
+    ingredients: '정제수, 이산화탄소, 카라멜색소, 인산, 카페인, 아스파탐(페닐알라닌 함유), 아세설팜칼륨, 천연착향료',
+  },
+  {
+    id: 'p2', name: '저당 사이다', cat: '탄산음료', icon: '🥃',
+    ingredients: '정제수, 이산화탄소, 알룰로스, 스테비아, 구연산, 천연레몬향',
+  },
+  {
+    id: 'p3', name: '제로 칼로리 젤리', cat: '디저트', icon: '🧊',
+    ingredients: '정제수, 에리스리톨, 젤라틴, 말티톨, 사카린나트륨, 합성착향료, 합성착색료',
+  },
+  {
+    id: 'p4', name: '단백질 바', cat: '에너지바', icon: '🍫',
+    ingredients: '유청단백질, 알룰로스, 코코아매스, 말티톨, 식이섬유, 코코아버터, 수크랄로스',
+  },
+  {
+    id: 'p5', name: '저당 요거트', cat: '유제품', icon: '🥄',
+    ingredients: '원유, 탈지분유, 알룰로스, 스테비아, 유산균, 천연 바닐라향',
+  },
+  {
+    id: 'p6', name: '오리지널 콜라', cat: '탄산음료', icon: '🥤',
+    ingredients: '정제수, 이산화탄소, 액상과당, 설탕, 카라멜색소, 인산, 카페인, 천연착향료',
+  }
+];
+
+/* ================== STATE ================== */
+const STATE = {
+  currentScreen: 'home',
+  prevScreen: 'home',
+  currentResult: null,
+  todayLogs: [
+    { time: '08:30', product: '아메리카노 (스테비아)', sweetener: '스테비아 0.1g', amount: 0.1, type: 'natural-substitute' },
+    { time: '12:15', product: '제로콜라 350ml', sweetener: '아스파탐 0.18g · 아세설팜K 0.05g', amount: 0.23, type: 'artificial' },
+    { time: '15:00', product: '바나나 1개', sweetener: '천연 과당 12g', amount: 12, type: 'natural-sugar' },
+  ],
+  weekData: [22, 18, 26, 19, 12, 15, 21]  // sugar grams Mon-Sun
+};
+
+/* ================== INIT ================== */
+window.addEventListener('DOMContentLoaded', () => {
+  renderFeaturedSweeteners();
+  renderSampleGrid();
+  renderLogList();
+  renderWeekChart();
+  renderCommunity();
+  renderLibrary();
+});
+
+/* ================== NAVIGATION ================== */
+function goScreen(name) {
+  STATE.prevScreen = STATE.currentScreen;
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  const tab = document.querySelector(`.tab[data-tab="${name}"]`);
+  if (tab) tab.classList.add('active');
+  STATE.currentScreen = name;
+  document.getElementById('screen-' + name).scrollTop = 0;
+}
+function goBack() {
+  goScreen(STATE.prevScreen || 'home');
+}
+
+/* ================== HOME ================== */
+function renderFeaturedSweeteners() {
+  const featured = ['aspartame', 'erythritol', 'allulose', 'stevia', 'xylitol', 'hfcs'];
+  const wrap = document.getElementById('featuredSweeteners');
+  wrap.innerHTML = featured.map(id => {
+    const s = SWEETENERS.find(x => x.id === id);
+    const safetyLabel = { safe: '안전', caution: '주의', warning: '경고' }[s.safety];
+    return `
+      <div class="sweet-card" onclick="openDetail('${s.id}')">
+        <span class="safety-badge ${s.safety}">● ${safetyLabel}</span>
+        <div class="name">${s.name}</div>
+        <div class="name-en">${s.nameEn}</div>
+        <div class="meta">${categoryLabel(s.category)}<br/>GI ${s.gi} · ${s.kcal}kcal/g</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function categoryLabel(cat) {
+  return {
+    'artificial': '인공감미료',
+    'sugar-alcohol': '당알코올',
+    'natural-substitute': '천연 대체당',
+    'natural-sugar': '천연당류'
+  }[cat];
+}
+
+/* ================== SCAN ================== */
+function switchScanMode(mode) {
+  document.querySelectorAll('.scan-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
+  document.querySelectorAll('.scan-mode').forEach(m => m.classList.toggle('active', m.id === 'mode-' + mode));
+}
+
+function renderSampleGrid() {
+  const grid = document.getElementById('sampleGrid');
+  grid.innerHTML = SAMPLE_PRODUCTS.map(p => `
+    <div class="sample-card" onclick="analyzeSample('${p.id}')">
+      <div class="img-placeholder">${p.icon}</div>
+      <div class="product-name">${p.name}</div>
+      <div class="product-cat">${p.cat}</div>
+    </div>
+  `).join('');
+}
+
+function analyzeSample(id) {
+  const product = SAMPLE_PRODUCTS.find(p => p.id === id);
+  if (!product) return;
+  showScanning('샘플을 분석 중이에요', '제품 라벨을 감미료 DB와 매칭하고 있어요');
+  setTimeout(() => {
+    const detected = detectSweeteners(product.ingredients);
+    showResult({ name: product.name, ingredients: product.ingredients, detected });
+    hideScanning();
+  }, 1400);
+}
+
+function loadSampleText() {
+  document.getElementById('textInput').value = SAMPLE_PRODUCTS[0].ingredients;
+}
+
+function analyzeText() {
+  const text = document.getElementById('textInput').value.trim();
+  if (!text) { alert('원재료명을 입력해주세요'); return; }
+  showScanning('텍스트를 분석 중이에요', '입력하신 원재료명에서 감미료를 찾고 있어요');
+  setTimeout(() => {
+    const detected = detectSweeteners(text);
+    showResult({ name: '내가 입력한 제품', ingredients: text, detected });
+    hideScanning();
+  }, 1000);
+}
+
+/* ===== OCR ===== */
+async function handleOcrUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    document.getElementById('ocrPreview').style.display = 'block';
+    document.getElementById('ocrImg').src = e.target.result;
+    document.getElementById('ocrStatus').textContent = '🔍 텍스트 인식 중... (Tesseract.js)';
+    document.getElementById('ocrText').textContent = '';
+    document.getElementById('ocrAnalyzeBtn').disabled = true;
+
+    try {
+      const { data: { text } } = await Tesseract.recognize(e.target.result, 'kor+eng', {
+        logger: m => {
+          if (m.status === 'recognizing text') {
+            document.getElementById('ocrStatus').textContent =
+              `🔍 인식 중... ${Math.round(m.progress * 100)}%`;
+          }
+        }
+      });
+      document.getElementById('ocrText').textContent = text || '(인식된 텍스트가 없어요)';
+      document.getElementById('ocrStatus').textContent = '✅ 인식 완료. 아래 버튼으로 분석하세요.';
+      document.getElementById('ocrAnalyzeBtn').disabled = false;
+      document.getElementById('ocrAnalyzeBtn').dataset.text = text;
+    } catch (err) {
+      document.getElementById('ocrStatus').textContent = '❌ 인식 실패. 텍스트 입력 모드를 이용해주세요.';
+      console.error(err);
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function analyzeOcr() {
+  const text = document.getElementById('ocrAnalyzeBtn').dataset.text || '';
+  if (!text.trim()) return;
+  showScanning('OCR 결과를 분석 중이에요', '추출된 텍스트에서 감미료를 찾고 있어요');
+  setTimeout(() => {
+    const detected = detectSweeteners(text);
+    showResult({ name: 'OCR 분석 제품', ingredients: text, detected });
+    hideScanning();
+  }, 1000);
+}
+
+/* ===== Detection logic ===== */
+function detectSweeteners(text) {
+  const lower = text.toLowerCase().replace(/\s+/g, '');
+  const found = [];
+  for (const s of SWEETENERS) {
+    for (const alias of s.aliases) {
+      const a = alias.toLowerCase().replace(/\s+/g, '');
+      if (lower.includes(a)) {
+        if (!found.find(f => f.id === s.id)) found.push(s);
+        break;
+      }
+    }
+  }
+  return found;
+}
+
+/* ================== RESULT ================== */
+function showResult({ name, ingredients, detected }) {
+  STATE.currentResult = { name, ingredients, detected };
+  document.getElementById('resultProduct').textContent = name;
+  document.getElementById('resultMeta').textContent = '2026.05.08 · ' + (detected.length === 0 ? '감미료 미검출' : `${detected.length}종 검출`);
+
+  // Verdict
+  const verdictBox = document.getElementById('verdictBox');
+  const emoji = document.getElementById('verdictEmoji');
+  const title = document.getElementById('verdictTitle');
+  const sub = document.getElementById('verdictSub');
+
+  let verdictType = 'good';
+  if (detected.length === 0) {
+    verdictType = 'good';
+    emoji.textContent = '✨';
+    title.textContent = '감미료가 검출되지 않았어요';
+    sub.textContent = '원재료에서 감미료/대체당을 찾지 못했어요. 다른 첨가물도 확인해보세요.';
+  } else {
+    const hasWarning = detected.some(d => d.safety === 'warning');
+    const hasCaution = detected.some(d => d.safety === 'caution');
+    if (hasWarning) {
+      verdictType = 'bad';
+      emoji.textContent = '⚠️';
+      title.textContent = '주의해서 섭취하세요';
+      sub.textContent = `위험도 높은 성분이 ${detected.filter(d=>d.safety==='warning').length}종 검출됐어요.`;
+    } else if (hasCaution) {
+      verdictType = 'warn';
+      emoji.textContent = '🤔';
+      title.textContent = '적정량 확인이 필요해요';
+      sub.textContent = `주의 성분이 ${detected.filter(d=>d.safety==='caution').length}종 있어요. 일일 권장량을 지키세요.`;
+    } else {
+      verdictType = 'good';
+      emoji.textContent = '💚';
+      title.textContent = '비교적 안전한 선택!';
+      sub.textContent = `검출된 ${detected.length}종 모두 안전 등급입니다.`;
+    }
+  }
+  verdictBox.classList.remove('good', 'warn', 'bad');
+  verdictBox.classList.add(verdictType);
+
+  // detected list
+  const list = document.getElementById('detectedList');
+  if (detected.length === 0) {
+    list.innerHTML = `<div style="text-align:center;padding:30px;color:#95a5b5;font-size:13px;">검출된 감미료가 없어요 🌱</div>`;
+  } else {
+    list.innerHTML = detected.map(d => `
+      <div class="detected-card ${d.safety === 'safe' ? '' : d.safety}" onclick="openDetail('${d.id}')">
+        <div class="detected-head">
+          <div>
+            <div class="detected-name">${d.icon} ${d.name}</div>
+            <div class="detected-name-en">${d.nameEn}${d.code ? ' · ' + d.code : ''}</div>
+          </div>
+          <span class="safety-badge ${d.safety}">${{safe:'안전',caution:'주의',warning:'경고'}[d.safety]}</span>
+        </div>
+        <div style="font-size:12px;color:#5a7184;line-height:1.5;">${d.desc}</div>
+        <div class="detected-stats">
+          <div class="stat-cell"><div class="stat-label">단맛(설탕대비)</div><div class="stat-value">${d.sweetness}x</div></div>
+          <div class="stat-cell"><div class="stat-label">GI 지수</div><div class="stat-value">${d.gi}</div></div>
+          <div class="stat-cell"><div class="stat-label">칼로리</div><div class="stat-value">${d.kcal}kcal/g</div></div>
+        </div>
+        <div class="detected-side">
+          <b>주요 부작용:</b> ${d.sideEffects.slice(0, 2).join(', ')}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // Recommendations
+  renderRecommendations(detected);
+  goScreen('result');
+}
+
+function renderRecommendations(detected) {
+  const wrap = document.getElementById('recommendList');
+  // Find products that don't share any harmful sweeteners with current
+  const harmfulIds = detected.filter(d => d.safety !== 'safe').map(d => d.id);
+  const better = SAMPLE_PRODUCTS.filter(p => {
+    const pDetected = detectSweeteners(p.ingredients);
+    return pDetected.length > 0 &&
+           pDetected.every(s => s.safety === 'safe') &&
+           !pDetected.some(s => harmfulIds.includes(s.id));
+  }).slice(0, 3);
+
+  if (better.length === 0) {
+    wrap.innerHTML = `<div style="text-align:center;padding:20px;color:#95a5b5;font-size:12px;">DB에 더 안전한 대체 제품을 추가 중이에요 🌱</div>`;
+    return;
+  }
+  wrap.innerHTML = better.map(p => {
+    const sweets = detectSweeteners(p.ingredients);
+    return `
+      <div class="recommend-card" onclick="analyzeSample('${p.id}')">
+        <div class="img-thumb">${p.icon}</div>
+        <div class="info">
+          <div class="name">${p.name}</div>
+          <div class="reason">${sweets.map(s => s.name).join(' · ')} 사용 (모두 안전 등급)</div>
+        </div>
+        <div class="score">추천</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function logCurrentProduct() {
+  if (!STATE.currentResult) return;
+  alert(`✅ "${STATE.currentResult.name}" 이(가) 오늘의 섭취 기록에 추가되었어요!`);
+  goScreen('tracker');
+}
+
+/* ================== DETAIL ================== */
+function openDetail(id) {
+  const s = SWEETENERS.find(x => x.id === id);
+  if (!s) return;
+  document.getElementById('detailName').textContent = s.name;
+  document.getElementById('detailNameEn').textContent = s.nameEn + (s.code ? ' · ' + s.code : '');
+
+  const hero = document.getElementById('detailHero');
+  hero.classList.remove('caution', 'warning');
+  if (s.safety === 'caution') hero.classList.add('caution');
+  if (s.safety === 'warning') hero.classList.add('warning');
+
+  document.getElementById('detailBadges').innerHTML = `
+    <span>${categoryLabel(s.category)}</span>
+    <span>${{safe:'✅ 안전 등급', caution:'⚠️ 주의 등급', warning:'🚨 경고 등급'}[s.safety]}</span>
+    <span>설탕 대비 ${s.sweetness}배</span>
+  `;
+
+  document.getElementById('detailInfoRow').innerHTML = `
+    <div class="info-cell"><div class="l">단맛</div><div class="v">${s.sweetness}x</div><div class="sub">설탕 대비</div></div>
+    <div class="info-cell"><div class="l">GI 지수</div><div class="v">${s.gi}</div><div class="sub">${s.gi === 0 ? '혈당 영향 없음' : s.gi < 30 ? '낮음' : s.gi < 70 ? '중간' : '높음'}</div></div>
+    <div class="info-cell"><div class="l">칼로리</div><div class="v">${s.kcal} kcal</div><div class="sub">/그램</div></div>
+    <div class="info-cell"><div class="l">일일 권장</div><div class="v" style="font-size:11px">${s.adi}</div></div>
+  `;
+
+  document.getElementById('detailDesc').textContent = s.desc;
+
+  const sideList = document.getElementById('detailSideList');
+  sideList.classList.remove('warn', 'danger');
+  if (s.safety === 'caution') sideList.classList.add('warn');
+  if (s.safety === 'warning') sideList.classList.add('danger');
+  sideList.innerHTML = s.sideEffects.map(e => `<li>${e}</li>`).join('');
+
+  document.getElementById('detailGuide').textContent = s.guide;
+  document.getElementById('detailWhereUsed').textContent = s.whereUsed;
+
+  const srcList = document.getElementById('detailSourceList');
+  srcList.innerHTML = (s.sources || []).map(src => `<li>${src}</li>`).join('') ||
+    '<li style="color:#95a5b5;">출처 정보 준비 중</li>';
+
+  goScreen('detail');
+}
+
+/* ================== LIBRARY ================== */
+function openSweetenerLibrary() {
+  goScreen('library');
+}
+function renderLibrary(filter = 'all') {
+  const filters = [
+    { id: 'all', label: '전체' },
+    { id: 'artificial', label: '인공감미료' },
+    { id: 'sugar-alcohol', label: '당알코올' },
+    { id: 'natural-substitute', label: '천연 대체당' },
+    { id: 'natural-sugar', label: '천연당류' },
+    { id: 'safe', label: '✅ 안전' },
+    { id: 'caution', label: '⚠️ 주의' },
+    { id: 'warning', label: '🚨 경고' }
+  ];
+  document.getElementById('libFilters').innerHTML = filters.map(f =>
+    `<div class="chip ${f.id === filter ? 'active' : ''}" onclick="renderLibrary('${f.id}')">${f.label}</div>`
+  ).join('');
+
+  let list = SWEETENERS;
+  if (['artificial','sugar-alcohol','natural-substitute','natural-sugar'].includes(filter)) {
+    list = list.filter(s => s.category === filter);
+  } else if (['safe','caution','warning'].includes(filter)) {
+    list = list.filter(s => s.safety === filter);
+  }
+  document.getElementById('libraryList').innerHTML = list.map(s => `
+    <div class="detected-card ${s.safety === 'safe' ? '' : s.safety}" style="margin-bottom:10px;" onclick="openDetail('${s.id}')">
+      <div class="detected-head">
+        <div>
+          <div class="detected-name">${s.icon} ${s.name}</div>
+          <div class="detected-name-en">${s.nameEn}${s.code ? ' · ' + s.code : ''} · ${categoryLabel(s.category)}</div>
+        </div>
+        <span class="safety-badge ${s.safety}">${{safe:'안전',caution:'주의',warning:'경고'}[s.safety]}</span>
+      </div>
+      <div style="font-size:12px;color:#5a7184;line-height:1.5;">${s.desc.slice(0, 80)}…</div>
+    </div>
+  `).join('');
+}
+
+/* ================== TRACKER ================== */
+function renderLogList() {
+  const list = document.getElementById('logList');
+  list.innerHTML = STATE.todayLogs.map(l => `
+    <div class="log-entry ${l.type === 'artificial' ? 'warn' : ''}">
+      <div class="time">${l.time}</div>
+      <div class="item">
+        ${l.product}
+        <span class="sub">${l.sweetener}</span>
+      </div>
+      <div class="amount">${l.amount}g</div>
+    </div>
+  `).join('');
+}
+function renderWeekChart() {
+  const max = Math.max(...STATE.weekData);
+  const chart = document.getElementById('weekChart');
+  chart.innerHTML = STATE.weekData.map((v, i) => {
+    const h = Math.max(8, (v/max) * 100);
+    const isToday = i === 3;
+    const color = v > 25 ? '#FF7676' : isToday ? '#4ECDC4' : '#A0DCD7';
+    return `
+      <div style="display:flex;flex-direction:column;align-items:center;flex:1;">
+        <div style="font-size:9px;color:#95a5b5;margin-bottom:4px;">${v}g</div>
+        <div style="width:18px;height:${h}px;background:${color};border-radius:6px;"></div>
+      </div>
+    `;
+  }).join('');
+}
+
+/* ================== COMMUNITY ================== */
+const COMMUNITY_POSTS = [
+  { tag: '제품 리뷰', cat: 'review', user: '하은', avatar: '하', time: '2시간 전',
+    body: '드디어 알룰로스 콜라 마셔봤는데, 진짜 설탕 콜라랑 거의 차이 없어요. 뒷맛도 깔끔!',
+    product: '제로사이다 (알룰로스+스테비아)', rating: 4.5 },
+  { tag: '부작용 후기', cat: 'side', user: '민준', avatar: '민', time: '5시간 전',
+    body: '말티톨 들어간 무설탕 초콜릿 한 박스 먹었더니 화장실 행이에요... 다들 양 조절하세요.',
+    product: '키토 다크초콜릿', rating: null },
+  { tag: '저당 꿀팁', cat: 'tip', user: '소영', avatar: '소', time: '어제',
+    body: '"제로 슈가" ≠ "저당". 액상과당이나 트레할로스 들어가면 GI지수 70 이상이에요. 라벨 꼼꼼히 보세요.',
+    product: null, rating: null },
+  { tag: 'Q&A', cat: 'qna', user: '지호', avatar: '지', time: '2일 전',
+    body: '에리스리톨이 심혈관에 안 좋다는 뉴스 봤는데 진짜인가요? 다른 분들은 어떻게 생각하세요?',
+    product: null, rating: null },
+  { tag: '제품 리뷰', cat: 'review', user: '예린', avatar: '예',  time: '3일 전',
+    body: '아스파탐 들어간 다이어트 음료 끊고 스테비아 음료로 바꿨는데 두통이 줄었어요 ㄴㅇㄱ',
+    product: '내추럴 스테비아 차', rating: 5 },
+];
+function renderCommunity(filter = 'all') {
+  const list = document.getElementById('communityList');
+  const filtered = filter === 'all' ? COMMUNITY_POSTS : COMMUNITY_POSTS.filter(p => p.cat === filter);
+  list.innerHTML = filtered.map(p => `
+    <div class="post-card">
+      <div class="post-head">
+        <div class="avatar">${p.avatar}</div>
+        <div class="post-user">
+          <div class="name">${p.user}</div>
+          <div class="time">${p.time}</div>
+        </div>
+        <div class="post-tag">${p.tag}</div>
+      </div>
+      <div class="post-body">${p.body}</div>
+      ${p.product ? `
+        <div class="post-product">
+          📦 ${p.product}
+          ${p.rating ? `<span class="rating">⭐ ${p.rating}</span>` : ''}
+        </div>` : ''}
+      <div class="post-actions">
+        <span class="act">❤️ 좋아요 ${Math.floor(Math.random()*30)+5}</span>
+        <span class="act">💬 댓글 ${Math.floor(Math.random()*8)+1}</span>
+        <span class="act">🔖 저장</span>
+      </div>
+    </div>
+  `).join('');
+}
+function filterCommunity(el, cat) {
+  document.querySelectorAll('.ctab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderCommunity(cat);
+}
+
+/* ================== UTIL ================== */
+function showScanning(msg, sub) {
+  document.getElementById('scanMsg').textContent = msg || '분석 중이에요';
+  document.getElementById('scanSub').textContent = sub || '';
+  document.getElementById('scanningOverlay').classList.remove('hidden');
+}
+function hideScanning() {
+  document.getElementById('scanningOverlay').classList.add('hidden');
+}
+</script>
+</body>
+</html>
