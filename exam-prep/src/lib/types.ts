@@ -7,14 +7,6 @@ export interface Exam {
   organization: string
   color: string      // tailwind bg color class
   textColor: string  // tailwind text color class
-  sessions: Session[]
-}
-
-export interface Session {
-  id: string
-  year: number
-  round: number
-  label: string
   subjects: Subject[]
 }
 
@@ -41,11 +33,3 @@ export interface UserAnswer {
 
 export type ExamProgress = Record<string, UserAnswer>
 export type AllProgress = Record<string, ExamProgress>
-
-export interface QuizResult {
-  sessionId: string
-  examId: ExamId
-  total: number
-  correct: number
-  completedAt: number
-}

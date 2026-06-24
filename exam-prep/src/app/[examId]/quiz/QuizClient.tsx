@@ -8,11 +8,8 @@ import { saveAnswer } from '@/lib/store'
 interface Props {
   examId: string
   examName: string
-  examColor: string
-  sessionLabel: string
-  sessionId: string
+  label: string
   questions: Question[]
-  isRandom?: boolean
 }
 
 type AnswerMap = Record<string, { selected: number; correct: boolean }>
@@ -26,7 +23,7 @@ function shuffle<T>(arr: T[]): T[] {
   return a
 }
 
-export function QuizClient({ examId, examName, sessionLabel, questions }: Props) {
+export function QuizClient({ examId, examName, label, questions }: Props) {
   const [queue, setQueue] = useState<Question[]>(questions)
   const [currentIdx, setCurrentIdx] = useState(0)
   const [selected, setSelected] = useState<number | null>(null)
@@ -75,7 +72,7 @@ export function QuizClient({ examId, examName, sessionLabel, questions }: Props)
             <span className="text-white text-3xl font-black">{accuracy}%</span>
           </div>
           <h2 className="text-xl font-black text-slate-900">{message}</h2>
-          <p className="text-sm text-slate-400 mt-1">{sessionLabel}</p>
+          <p className="text-sm text-slate-400 mt-1">{label}</p>
           <p className="text-base text-slate-600 mt-3">
             {queue.length}문제 중{' '}
             <span className="font-extrabold text-blue-600">{correctCount}문제</span> 정답
@@ -166,7 +163,7 @@ export function QuizClient({ examId, examName, sessionLabel, questions }: Props)
       <div className="bg-white rounded-3xl px-6 py-6 mb-5 shadow-[0_6px_24px_rgba(37,99,235,0.07)]">
         <div className="flex items-center justify-between mb-3">
           <span className="text-xl font-black text-blue-600">Q{currentIdx + 1}</span>
-          <span className="text-[11px] font-bold text-slate-300">{examName}</span>
+          <span className="text-[11px] font-bold text-slate-300">{examName} · {label}</span>
         </div>
         <p className="text-[17px] font-bold text-slate-900 leading-relaxed">{current.text}</p>
       </div>

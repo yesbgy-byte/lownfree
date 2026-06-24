@@ -24,10 +24,7 @@ export default function Home() {
       {/* Exam cards */}
       <div className="space-y-3.5">
         {exams.map((exam) => {
-          const totalQ = exam.sessions.reduce(
-            (sum, s) => sum + s.subjects.reduce((ss, sub) => ss + sub.questions.length, 0),
-            0
-          )
+          const totalQ = exam.subjects.reduce((sum, s) => sum + s.questions.length, 0)
           return (
             <Link
               key={exam.id}

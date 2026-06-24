@@ -11,18 +11,11 @@ export default async function StatsPage({
   const exam = getExam(examId)
   if (!exam) notFound()
 
-  const sessions = exam.sessions.map((s) => ({
+  const subjects = exam.subjects.map((s) => ({
     id: s.id,
-    label: s.label,
-    questionIds: s.subjects.flatMap((sub) => sub.questions.map((q) => q.id)),
+    label: s.name,
+    questionIds: s.questions.map((q) => q.id),
   }))
 
-  return (
-    <StatsClient
-      examId={examId}
-      examName={exam.name}
-      examColor={exam.color}
-      sessions={sessions}
-    />
-  )
+  return <StatsClient examId={examId} examName={exam.name} subjects={subjects} />
 }

@@ -1,5 +1,5 @@
 import { notFound, redirect } from 'next/navigation'
-import { getExam, getAllQuestions, getAllQuestionsForExam } from '@/lib/data'
+import { getExam, getSubject, getAllQuestionsForExam } from '@/lib/data'
 import { QuizClient } from './QuizClient'
 import { Question } from '@/lib/types'
 
@@ -17,36 +17,30 @@ export default async function QuizPage({
   searchParams,
 }: {
   params: Promise<{ examId: string }>
-  searchParams: Promise<{ session?: string; mode?: string }>
+  searchParams: Promise<{ subject?: string; mode?: string }>
 }) {
   const { examId } = await params
-  const { session: sessionId, mode } = await searchParams
+  const { subject: subjectId, mode } = await searchParams
 
   const exam = getExam(examId)
   if (!exam) notFound()
 
   let questions: Question[]
-  let sessionLabel: string
+  let label: string
 
-  if (mode === 'random') {
+  if (subjectId) {
+    const subject = getSubject(examId, subjectId)
+    if (!subject) redirect(`/${examId}`)
+    questions = shuffle(subject.questions)
+    label = subject.name
+  } else if (mode === 'random') {
     questions = shuffle(getAllQuestionsForExam(examId))
-    sessionLabel = '랜덤 모드'
+    label = '전체 랜덤'
   } else {
-    if (!sessionId) redirect(`/${examId}`)
-    const session = exam.sessions.find((s) => s.id === sessionId)
-    if (!session) redirect(`/${examId}`)
-    questions = getAllQuestions(examId, sessionId)
-    sessionLabel = session.label
+    redirect(`/${examId}`)
   }
 
   return (
-    <QuizClient
-      examId={examId}
-      examName={exam.name}
-      examColor={exam.color}
-      sessionLabel={sessionLabel}
-      sessionId={sessionId ?? 'random'}
-      questions={questions}
-    />
+    <QuizClient examId={examId} examName={exam.name} label={label} questions={questions} />
   )
 }

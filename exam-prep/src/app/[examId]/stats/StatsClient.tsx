@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { getExamProgress } from '@/lib/store'
 
-interface SessionMeta {
+interface SubjectMeta {
   id: string
   label: string
   questionIds: string[]
@@ -13,31 +13,30 @@ interface SessionMeta {
 interface Props {
   examId: string
   examName: string
-  examColor: string
-  sessions: SessionMeta[]
+  subjects: SubjectMeta[]
 }
 
-export function StatsClient({ examId, examName, sessions }: Props) {
-  const [sessionStats, setSessionStats] = useState<
+export function StatsClient({ examId, examName, subjects }: Props) {
+  const [subjectStats, setSubjectStats] = useState<
     { label: string; total: number; correct: number; answered: number }[]
   >([])
   const [overall, setOverall] = useState({ total: 0, correct: 0, answered: 0 })
 
   useEffect(() => {
     const progress = getExamProgress(examId)
-    const stats = sessions.map((s) => {
+    const stats = subjects.map((s) => {
       const total = s.questionIds.length
       const answered = s.questionIds.filter((id) => id in progress).length
       const correct = s.questionIds.filter((id) => progress[id]?.correct).length
       return { label: s.label, total, correct, answered }
     })
-    setSessionStats(stats)
+    setSubjectStats(stats)
 
     const totalQ = stats.reduce((sum, s) => sum + s.total, 0)
     const totalAnswered = stats.reduce((sum, s) => sum + s.answered, 0)
     const totalCorrect = stats.reduce((sum, s) => sum + s.correct, 0)
     setOverall({ total: totalQ, correct: totalCorrect, answered: totalAnswered })
-  }, [examId, sessions])
+  }, [examId, subjects])
 
   const accuracy = overall.answered > 0 ? Math.round((overall.correct / overall.answered) * 100) : 0
 
@@ -64,9 +63,9 @@ export function StatsClient({ examId, examName, sessions }: Props) {
       </div>
 
       {/* Per session */}
-      <h2 className="text-sm font-extrabold text-slate-500 px-1 mb-3">회차별 현황</h2>
+      <h2 className="text-sm font-extrabold text-slate-500 px-1 mb-3">과목별 현황</h2>
       <div className="space-y-3">
-        {sessionStats.map((s) => {
+        {subjectStats.map((s) => {
           const sessionAccuracy = s.answered > 0 ? Math.round((s.correct / s.answered) * 100) : 0
           return (
             <div key={s.label} className="bg-white rounded-2xl px-5 py-4 shadow-[0_4px_14px_rgba(37,99,235,0.05)]">

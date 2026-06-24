@@ -11,7 +11,7 @@ export default async function WrongPage({
   const exam = getExam(examId)
   if (!exam) notFound()
 
-  const allQuestions = exam.sessions.flatMap((s) => s.subjects.flatMap((sub) => sub.questions))
+  const allQuestions = exam.subjects.flatMap((s) => s.questions)
 
   return (
     <WrongClient

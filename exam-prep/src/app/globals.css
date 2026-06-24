@@ -1,7 +1,8 @@
 @import "tailwindcss";
 
 @theme inline {
-  --font-sans: var(--font-noto-kr), var(--font-geist);
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', system-ui,
+    'Segoe UI', 'Malgun Gothic', sans-serif;
 }
 
 :root {
@@ -13,6 +14,7 @@ html {
 }
 
 body {
-  font-family: var(--font-sans), -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
