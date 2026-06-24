@@ -95,7 +95,7 @@ export function QuizClient({ examId, examName, examColor, sessionLabel, sessionI
   }
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-6 flex flex-col min-h-screen">
+    <div className="max-w-lg mx-auto px-4 py-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <Link href={`/${examId}`} className="text-sm text-gray-500">
@@ -115,7 +115,7 @@ export function QuizClient({ examId, examName, examColor, sessionLabel, sessionI
       </div>
 
       {/* Question */}
-      <div className="mb-6 flex-1">
+      <div className="mb-6">
         <p className="text-xs text-gray-400 mb-2 font-medium">
           {examName} · {sessionLabel}
         </p>
