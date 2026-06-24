@@ -17,7 +17,7 @@ interface Props {
   sessions: SessionMeta[]
 }
 
-export function StatsClient({ examId, examName, examColor, sessions }: Props) {
+export function StatsClient({ examId, examName, sessions }: Props) {
   const [sessionStats, setSessionStats] = useState<
     { label: string; total: number; correct: number; answered: number }[]
   >([])
@@ -42,50 +42,47 @@ export function StatsClient({ examId, examName, examColor, sessions }: Props) {
   const accuracy = overall.answered > 0 ? Math.round((overall.correct / overall.answered) * 100) : 0
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-6">
-      <Link href={`/${examId}`} className="text-sm text-gray-500 flex items-center gap-1 mb-4">
-        ← {examName}
+    <div className="max-w-lg mx-auto px-5 pt-6 pb-12">
+      <Link href={`/${examId}`} className="inline-flex items-center gap-1 text-sm font-semibold text-slate-400 mb-4">
+        ‹ {examName}
       </Link>
 
-      <h1 className="text-xl font-bold text-gray-900 mb-6">학습 통계</h1>
+      <h1 className="text-2xl font-black text-slate-900 mb-5">📊 학습 통계</h1>
 
       {/* Overall card */}
-      <div className={`${examColor} rounded-2xl px-5 py-5 mb-6 text-white`}>
-        <p className="text-white/70 text-sm">전체 정답률</p>
-        <p className="text-4xl font-bold mt-1">{accuracy}%</p>
-        <p className="text-white/80 text-sm mt-2">
+      <div className="bg-blue-500 rounded-3xl px-6 py-7 mb-6 text-white shadow-[0_8px_24px_rgba(37,99,235,0.2)]">
+        <p className="text-white/70 text-sm font-bold">전체 정답률</p>
+        <p className="text-5xl font-black mt-1">{accuracy}%</p>
+        <p className="text-white/80 text-sm mt-2.5">
           풀이 {overall.answered}/{overall.total}문제 · 정답 {overall.correct}문제
         </p>
         {overall.answered > 0 && (
-          <div className="mt-3 bg-white/20 rounded-full h-2">
-            <div
-              className="bg-white h-2 rounded-full"
-              style={{ width: `${accuracy}%` }}
-            />
+          <div className="mt-4 bg-white/25 rounded-full h-2.5">
+            <div className="bg-white h-2.5 rounded-full" style={{ width: `${accuracy}%` }} />
           </div>
         )}
       </div>
 
       {/* Per session */}
-      <h2 className="text-sm font-semibold text-gray-500 mb-3 uppercase tracking-wide">회차별 현황</h2>
+      <h2 className="text-sm font-extrabold text-slate-500 px-1 mb-3">회차별 현황</h2>
       <div className="space-y-3">
         {sessionStats.map((s) => {
           const sessionAccuracy = s.answered > 0 ? Math.round((s.correct / s.answered) * 100) : 0
           return (
-            <div key={s.label} className="bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-4">
-              <div className="flex items-center justify-between mb-2">
-                <p className="font-medium text-gray-800">{s.label}</p>
-                <p className="text-sm font-semibold text-gray-600">
+            <div key={s.label} className="bg-white rounded-2xl px-5 py-4 shadow-[0_4px_14px_rgba(37,99,235,0.05)]">
+              <div className="flex items-center justify-between mb-2.5">
+                <p className="font-bold text-slate-800">{s.label}</p>
+                <p className="text-sm font-extrabold text-blue-600">
                   {s.answered === 0 ? '미풀이' : `${sessionAccuracy}%`}
                 </p>
               </div>
-              <div className="bg-gray-100 rounded-full h-1.5 mb-1.5">
+              <div className="bg-blue-50 rounded-full h-2 mb-2">
                 <div
-                  className="bg-green-500 h-1.5 rounded-full transition-all"
+                  className="bg-blue-500 h-2 rounded-full transition-all"
                   style={{ width: s.answered === 0 ? '0%' : `${sessionAccuracy}%` }}
                 />
               </div>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-slate-400">
                 {s.answered}/{s.total}문제 풀이 · 정답 {s.correct}문제
               </p>
             </div>
@@ -94,8 +91,8 @@ export function StatsClient({ examId, examName, examColor, sessions }: Props) {
       </div>
 
       {overall.answered === 0 && (
-        <p className="text-center text-sm text-gray-400 mt-8">
-          아직 풀이한 문제가 없습니다.<br />회차를 선택해서 시작해 보세요!
+        <p className="text-center text-sm text-slate-400 mt-8">
+          아직 풀이한 문제가 없어요.<br />랜덤 문제로 시작해 보세요!
         </p>
       )}
     </div>

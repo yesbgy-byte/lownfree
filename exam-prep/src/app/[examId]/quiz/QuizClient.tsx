@@ -26,7 +26,7 @@ function shuffle<T>(arr: T[]): T[] {
   return a
 }
 
-export function QuizClient({ examId, examName, examColor, sessionLabel, sessionId, questions, isRandom }: Props) {
+export function QuizClient({ examId, examName, sessionLabel, questions }: Props) {
   const [queue, setQueue] = useState<Question[]>(questions)
   const [currentIdx, setCurrentIdx] = useState(0)
   const [selected, setSelected] = useState<number | null>(null)
@@ -36,7 +36,6 @@ export function QuizClient({ examId, examName, examColor, sessionLabel, sessionI
   const current = queue[currentIdx]
   const isAnswered = selected !== null
   const isLast = currentIdx === queue.length - 1
-  const totalAnswered = Object.keys(answers).length
 
   const handleSelect = useCallback(
     (option: number) => {
@@ -62,21 +61,59 @@ export function QuizClient({ examId, examName, examColor, sessionLabel, sessionI
 
   const correctCount = Object.values(answers).filter((a) => a.correct).length
 
+  // ---------- Result screen ----------
   if (showResult) {
     const accuracy = Math.round((correctCount / queue.length) * 100)
-    return (
-      <div className="max-w-lg mx-auto px-4 py-12 flex flex-col items-center text-center">
-        <div className={`${examColor} w-20 h-20 rounded-full flex items-center justify-center mb-4`}>
-          <span className="text-white text-3xl font-bold">{accuracy}%</span>
-        </div>
-        <h2 className="text-xl font-bold text-gray-900 mb-1">풀이 완료!</h2>
-        <p className="text-gray-500 mb-1">{sessionLabel}</p>
-        <p className="text-lg text-gray-700 mb-8">
-          {queue.length}문제 중{' '}
-          <span className="font-bold text-gray-900">{correctCount}문제</span> 정답
-        </p>
+    const message =
+      accuracy >= 80 ? '완벽해요! 🎉' : accuracy >= 50 ? '잘하고 있어요 💪' : '다시 도전해봐요 🔥'
 
-        <div className="w-full space-y-3">
+    return (
+      <div className="max-w-lg mx-auto px-5 pt-8 pb-12">
+        {/* Score hero */}
+        <div className="bg-white rounded-3xl px-6 py-8 mb-5 text-center shadow-[0_6px_24px_rgba(37,99,235,0.08)]">
+          <div className="w-24 h-24 rounded-full bg-blue-500 flex items-center justify-center mx-auto mb-4">
+            <span className="text-white text-3xl font-black">{accuracy}%</span>
+          </div>
+          <h2 className="text-xl font-black text-slate-900">{message}</h2>
+          <p className="text-sm text-slate-400 mt-1">{sessionLabel}</p>
+          <p className="text-base text-slate-600 mt-3">
+            {queue.length}문제 중{' '}
+            <span className="font-extrabold text-blue-600">{correctCount}문제</span> 정답
+          </p>
+        </div>
+
+        {/* Per-question review */}
+        <h3 className="text-sm font-extrabold text-slate-500 px-1 mb-3">📝 정답 확인</h3>
+        <div className="space-y-3 mb-6">
+          {queue.map((q, idx) => {
+            const a = answers[q.id]
+            if (!a) return null
+            return (
+              <div key={q.id} className="bg-white rounded-2xl px-5 py-4 shadow-[0_4px_14px_rgba(37,99,235,0.05)]">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-base font-black text-blue-600">Q{idx + 1}</span>
+                  <span
+                    className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                      a.correct ? 'bg-blue-100 text-blue-600' : 'bg-rose-100 text-rose-500'
+                    }`}
+                  >
+                    {a.correct ? '정답' : '오답'}
+                  </span>
+                </div>
+                <p className="text-sm font-bold text-slate-800 leading-relaxed mb-2.5">{q.text}</p>
+                <p className="text-sm text-slate-500 mb-1">
+                  <span className="font-bold text-blue-600">정답 {q.answer}번 · </span>
+                  {q.options[q.answer - 1]}
+                </p>
+                <p className="text-xs text-slate-500 leading-relaxed bg-slate-50 rounded-xl px-3 py-2.5 mt-2">
+                  {q.explanation}
+                </p>
+              </div>
+            )
+          })}
+        </div>
+
+        <div className="space-y-3">
           <button
             onClick={() => {
               setQueue(shuffle(questions))
@@ -85,19 +122,19 @@ export function QuizClient({ examId, examName, examColor, sessionLabel, sessionI
               setAnswers({})
               setShowResult(false)
             }}
-            className={`w-full py-3.5 rounded-xl ${examColor} text-white font-semibold`}
+            className="w-full py-4 rounded-2xl bg-blue-500 text-white font-extrabold shadow-[0_8px_24px_rgba(37,99,235,0.25)] active:scale-[0.99] transition-transform"
           >
-            다시 풀기
+            🔄 다시 풀기
           </button>
           <Link
             href={`/${examId}/wrong`}
-            className="block w-full py-3.5 rounded-xl border border-gray-200 bg-white text-gray-700 font-semibold text-center"
+            className="block w-full py-4 rounded-2xl bg-white text-slate-600 font-bold text-center shadow-[0_4px_14px_rgba(37,99,235,0.05)]"
           >
-            틀린 문제 보기
+            ✏️ 틀린 문제 보기
           </Link>
           <Link
             href={`/${examId}`}
-            className="block w-full py-3.5 rounded-xl border border-gray-200 bg-white text-gray-700 font-semibold text-center"
+            className="block w-full py-3.5 text-slate-400 font-bold text-center text-sm"
           >
             목록으로
           </Link>
@@ -106,49 +143,54 @@ export function QuizClient({ examId, examName, examColor, sessionLabel, sessionI
     )
   }
 
+  // ---------- Quiz screen ----------
   return (
-    <div className="max-w-lg mx-auto px-4 py-6">
+    <div className="max-w-lg mx-auto px-5 pt-6 pb-12">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <Link href={`/${examId}`} className="text-sm text-gray-500">
-          ← 나가기
+      <div className="flex items-center gap-3 mb-4">
+        <Link href={`/${examId}`} className="text-slate-400 font-black text-lg">
+          ‹
         </Link>
-        <span className="text-sm font-medium text-gray-500">
-          {currentIdx + 1} / {queue.length}
+        <div className="flex-1 bg-blue-100 rounded-full h-2.5 overflow-hidden">
+          <div
+            className="bg-blue-500 h-2.5 rounded-full transition-all duration-300"
+            style={{ width: `${((currentIdx + 1) / queue.length) * 100}%` }}
+          />
+        </div>
+        <span className="text-sm font-extrabold text-slate-500 tabular-nums shrink-0">
+          {currentIdx + 1}/{queue.length}
         </span>
       </div>
 
-      {/* Progress bar */}
-      <div className="bg-gray-200 rounded-full h-1.5 mb-6">
-        <div
-          className={`${examColor} h-1.5 rounded-full transition-all duration-300`}
-          style={{ width: `${((currentIdx + 1) / queue.length) * 100}%` }}
-        />
-      </div>
-
-      {/* Question */}
-      <div className="mb-6">
-        <p className="text-xs text-gray-400 mb-2 font-medium">
-          {examName} · {sessionLabel}
-        </p>
-        <p className="text-base font-semibold text-gray-900 leading-relaxed">
-          {current.number}. {current.text}
-        </p>
+      {/* Question card */}
+      <div className="bg-white rounded-3xl px-6 py-6 mb-5 shadow-[0_6px_24px_rgba(37,99,235,0.07)]">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-xl font-black text-blue-600">Q{currentIdx + 1}</span>
+          <span className="text-[11px] font-bold text-slate-300">{examName}</span>
+        </div>
+        <p className="text-[17px] font-bold text-slate-900 leading-relaxed">{current.text}</p>
       </div>
 
       {/* Options */}
-      <div className="space-y-3 mb-6">
+      <div className="space-y-3 mb-5">
         {current.options.map((opt, i) => {
           const optNum = i + 1
           const isCorrect = optNum === current.answer
           const isSelected = selected === optNum
 
-          let style =
-            'border border-gray-200 bg-white text-gray-800'
+          let style = 'bg-white text-slate-700 shadow-[0_4px_14px_rgba(37,99,235,0.05)]'
+          let badge = 'bg-blue-50 text-blue-500'
           if (isAnswered) {
-            if (isCorrect) style = 'border-2 border-green-500 bg-green-50 text-green-800'
-            else if (isSelected) style = 'border-2 border-red-400 bg-red-50 text-red-800'
-            else style = 'border border-gray-100 bg-gray-50 text-gray-400'
+            if (isCorrect) {
+              style = 'bg-blue-50 ring-2 ring-blue-500 text-blue-700'
+              badge = 'bg-blue-500 text-white'
+            } else if (isSelected) {
+              style = 'bg-rose-50 ring-2 ring-rose-400 text-rose-600'
+              badge = 'bg-rose-400 text-white'
+            } else {
+              style = 'bg-white text-slate-300'
+              badge = 'bg-slate-100 text-slate-300'
+            }
           }
 
           return (
@@ -156,12 +198,14 @@ export function QuizClient({ examId, examName, examColor, sessionLabel, sessionI
               key={optNum}
               onClick={() => handleSelect(optNum)}
               disabled={isAnswered}
-              className={`w-full text-left px-4 py-3.5 rounded-xl transition-all text-sm ${style} ${
-                !isAnswered ? 'hover:border-gray-400 active:scale-[0.98]' : ''
+              className={`w-full flex items-center gap-3 text-left px-4 py-4 rounded-2xl transition-all ${style} ${
+                !isAnswered ? 'active:scale-[0.99]' : ''
               }`}
             >
-              <span className="font-semibold mr-2">{optNum}.</span>
-              {opt}
+              <span className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-black shrink-0 ${badge}`}>
+                {optNum}
+              </span>
+              <span className="text-sm font-semibold leading-snug">{opt}</span>
             </button>
           )
         })}
@@ -169,17 +213,20 @@ export function QuizClient({ examId, examName, examColor, sessionLabel, sessionI
 
       {/* Explanation */}
       {isAnswered && (
-        <div
-          className={`rounded-xl px-4 py-3 mb-4 text-sm leading-relaxed ${
-            selected === current.answer
-              ? 'bg-green-50 border border-green-200 text-green-800'
-              : 'bg-amber-50 border border-amber-200 text-amber-800'
-          }`}
-        >
-          <p className="font-semibold mb-1">
-            {selected === current.answer ? '정답입니다!' : `오답 (정답: ${current.answer}번)`}
-          </p>
-          <p>{current.explanation}</p>
+        <div className="bg-white rounded-2xl px-5 py-4 mb-5 shadow-[0_4px_14px_rgba(37,99,235,0.05)]">
+          <div className="flex items-center gap-2 mb-2">
+            <span
+              className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                selected === current.answer ? 'bg-blue-100 text-blue-600' : 'bg-rose-100 text-rose-500'
+              }`}
+            >
+              {selected === current.answer ? '정답' : '오답'}
+            </span>
+            {selected !== current.answer && (
+              <span className="text-sm font-bold text-slate-500">정답은 {current.answer}번</span>
+            )}
+          </div>
+          <p className="text-sm text-slate-600 leading-relaxed">{current.explanation}</p>
         </div>
       )}
 
@@ -187,14 +234,11 @@ export function QuizClient({ examId, examName, examColor, sessionLabel, sessionI
       {isAnswered && (
         <button
           onClick={handleNext}
-          className={`w-full py-4 rounded-xl ${examColor} text-white font-semibold text-base`}
+          className="w-full py-4 rounded-2xl bg-blue-500 text-white font-extrabold text-base shadow-[0_8px_24px_rgba(37,99,235,0.25)] active:scale-[0.99] transition-transform"
         >
-          {isLast ? '결과 보기' : '다음 문제'}
+          {isLast ? '결과 보기 →' : '다음 문제 →'}
         </button>
       )}
-
-      {/* Bottom spacing */}
-      <div className="h-4" />
     </div>
   )
 }

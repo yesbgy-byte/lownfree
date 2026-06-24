@@ -12,7 +12,7 @@ interface Props {
   allQuestions: Question[]
 }
 
-export function WrongClient({ examId, examName, examColor, allQuestions }: Props) {
+export function WrongClient({ examId, examName, allQuestions }: Props) {
   const [wrongQuestions, setWrongQuestions] = useState<Question[]>([])
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
 
@@ -22,64 +22,73 @@ export function WrongClient({ examId, examName, examColor, allQuestions }: Props
   }, [examId, allQuestions])
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-6">
-      <Link href={`/${examId}`} className="text-sm text-gray-500 flex items-center gap-1 mb-4">
-        ← {examName}
+    <div className="max-w-lg mx-auto px-5 pt-6 pb-12">
+      <Link href={`/${examId}`} className="inline-flex items-center gap-1 text-sm font-semibold text-slate-400 mb-4">
+        ‹ {examName}
       </Link>
 
-      <h1 className="text-xl font-bold text-gray-900 mb-1">틀린 문제</h1>
-      <p className="text-sm text-gray-500 mb-6">{wrongQuestions.length}문제</p>
+      <h1 className="text-2xl font-black text-slate-900 mb-1">✏️ 틀린 문제</h1>
+      <p className="text-sm text-slate-400 mb-6">{wrongQuestions.length}문제</p>
 
       {wrongQuestions.length === 0 ? (
-        <div className="text-center py-16 text-gray-400">
-          <p className="text-4xl mb-3">🎉</p>
-          <p className="font-medium">틀린 문제가 없습니다!</p>
-          <p className="text-sm mt-1">문제를 풀면 오답이 여기에 표시됩니다.</p>
+        <div className="bg-white rounded-3xl py-16 text-center shadow-[0_4px_14px_rgba(37,99,235,0.05)]">
+          <p className="text-5xl mb-3">🎉</p>
+          <p className="font-extrabold text-slate-700">틀린 문제가 없어요!</p>
+          <p className="text-sm text-slate-400 mt-1.5">문제를 풀면 오답이 여기에 모여요</p>
         </div>
       ) : (
         <div className="space-y-3">
           {wrongQuestions.map((q, idx) => {
             const isOpen = expanded[q.id]
             return (
-              <div key={q.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+              <div key={q.id} className="bg-white rounded-2xl shadow-[0_4px_14px_rgba(37,99,235,0.05)] overflow-hidden">
                 <button
                   onClick={() => setExpanded((prev) => ({ ...prev, [q.id]: !prev[q.id] }))}
-                  className="w-full text-left px-4 py-3.5"
+                  className="w-full text-left px-5 py-4"
                 >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-base font-black text-rose-500">Q{idx + 1}</span>
+                    <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-rose-100 text-rose-500">
+                      오답
+                    </span>
+                  </div>
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-medium text-gray-800 flex-1 leading-relaxed">
-                      <span className="text-gray-400 mr-1">Q{idx + 1}.</span>
-                      {q.text}
-                    </p>
-                    <span className="text-gray-400 text-lg leading-none mt-0.5">{isOpen ? '↑' : '↓'}</span>
+                    <p className="text-sm font-bold text-slate-800 flex-1 leading-relaxed">{q.text}</p>
+                    <span className="text-slate-300 text-sm leading-none mt-1">{isOpen ? '▲' : '▼'}</span>
                   </div>
                 </button>
 
                 {isOpen && (
-                  <div className="px-4 pb-4 border-t border-gray-50">
-                    <div className="mt-3 space-y-2">
+                  <div className="px-5 pb-5">
+                    <div className="space-y-2">
                       {q.options.map((opt, i) => {
                         const optNum = i + 1
                         const isCorrect = optNum === q.answer
                         return (
                           <div
                             key={optNum}
-                            className={`px-3 py-2.5 rounded-lg text-sm ${
+                            className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm ${
                               isCorrect
-                                ? 'bg-green-50 border border-green-200 text-green-800 font-medium'
-                                : 'text-gray-500'
+                                ? 'bg-blue-50 ring-1 ring-blue-200 text-blue-700 font-bold'
+                                : 'text-slate-400'
                             }`}
                           >
-                            <span className="font-semibold mr-1">{optNum}.</span>
+                            <span
+                              className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
+                                isCorrect ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-400'
+                              }`}
+                            >
+                              {optNum}
+                            </span>
                             {opt}
                           </div>
                         )
                       })}
                     </div>
-                    <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 text-sm text-amber-800">
-                      <span className="font-semibold">해설 </span>
+                    <p className="mt-3 text-sm text-slate-600 leading-relaxed bg-slate-50 rounded-xl px-3.5 py-3">
+                      <span className="font-extrabold text-slate-700">해설 · </span>
                       {q.explanation}
-                    </div>
+                    </p>
                   </div>
                 )}
               </div>

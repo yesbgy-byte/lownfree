@@ -1,39 +1,60 @@
 import Link from 'next/link'
 import { exams } from '@/lib/data'
 
+const examEmoji: Record<string, string> = {
+  'origin-manager': '🌏',
+  'bonded-area': '📦',
+  'real-estate': '🏠',
+}
+
 export default function Home() {
   return (
-    <div className="max-w-lg mx-auto px-4 py-8">
-      <header className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">자격증 기출문제</h1>
-        <p className="text-sm text-gray-500 mt-1">언제 어디서나 CBT 모의고사</p>
+    <div className="max-w-lg mx-auto px-5 pt-10 pb-12">
+      {/* Hero */}
+      <header className="mb-7">
+        <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-600 text-xs font-bold px-3 py-1.5 rounded-full mb-3">
+          🔥 틈틈이 기출 한 입
+        </div>
+        <h1 className="text-[26px] leading-tight font-black text-slate-900">
+          오늘도 기출 간식<br />한 입 어때요?
+        </h1>
+        <p className="text-sm text-slate-500 mt-2">자격증을 골라 랜덤 문제를 풀어보세요</p>
       </header>
 
-      <div className="space-y-4">
-        {exams.map((exam) => (
-          <Link
-            key={exam.id}
-            href={`/${exam.id}`}
-            className="block rounded-2xl overflow-hidden shadow-sm border border-gray-100 bg-white hover:shadow-md transition-shadow"
-          >
-            <div className={`${exam.color} px-5 py-4`}>
-              <p className="text-white/80 text-xs font-medium">{exam.organization}</p>
-              <h2 className="text-white text-xl font-bold mt-0.5">{exam.name}</h2>
-              <p className="text-white/70 text-sm mt-1">{exam.subtitle}</p>
-            </div>
-            <div className="px-5 py-3 flex items-center justify-between">
-              <span className="text-sm text-gray-500">
-                {exam.sessions.length}개 회차 수록
-              </span>
-              <span className={`text-sm font-semibold ${exam.textColor}`}>
-                시작하기 →
-              </span>
-            </div>
-          </Link>
-        ))}
+      {/* Exam cards */}
+      <div className="space-y-3.5">
+        {exams.map((exam) => {
+          const totalQ = exam.sessions.reduce(
+            (sum, s) => sum + s.subjects.reduce((ss, sub) => ss + sub.questions.length, 0),
+            0
+          )
+          return (
+            <Link
+              key={exam.id}
+              href={`/${exam.id}`}
+              className="flex items-center gap-4 bg-white rounded-3xl px-4 py-4 shadow-[0_6px_20px_rgba(37,99,235,0.06)] hover:shadow-[0_8px_28px_rgba(37,99,235,0.12)] transition-shadow active:scale-[0.99]"
+            >
+              <div
+                className={`${exam.color} w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shrink-0`}
+              >
+                {examEmoji[exam.id] ?? '📘'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-bold text-slate-400">{exam.organization}</p>
+                <h2 className="text-lg font-extrabold text-slate-900 leading-tight truncate">
+                  {exam.name}
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {exam.subtitle} · 총 {totalQ}문제
+                </p>
+              </div>
+              <span className={`text-xl font-black ${exam.textColor} shrink-0`}>›</span>
+            </Link>
+          )
+        })}
       </div>
 
-      <p className="text-center text-xs text-gray-400 mt-8">
+      <p className="text-center text-xs text-slate-400 mt-10">
         공공데이터 기반 · 학습용 샘플 문제
       </p>
     </div>

@@ -1,9 +1,18 @@
 @import "tailwindcss";
 
 @theme inline {
-  --font-sans: var(--font-geist);
+  --font-sans: var(--font-noto-kr), var(--font-geist);
+}
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  background-color: #eef3fd;
 }
 
 body {
-  font-family: var(--font-sans), -apple-system, 'Malgun Gothic', sans-serif;
+  font-family: var(--font-sans), -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
