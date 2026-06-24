@@ -765,3 +765,8 @@ export function getAllQuestions(examId: string, sessionId: string) {
   const session = getSession(examId, sessionId)
   return session?.subjects.flatMap((s) => s.questions) ?? []
 }
+
+export function getAllQuestionsForExam(examId: string) {
+  const exam = getExam(examId)
+  return exam?.sessions.flatMap((s) => s.subjects.flatMap((sub) => sub.questions)) ?? []
+}

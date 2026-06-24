@@ -12,19 +12,30 @@ interface Props {
   sessionLabel: string
   sessionId: string
   questions: Question[]
+  isRandom?: boolean
 }
 
 type AnswerMap = Record<string, { selected: number; correct: boolean }>
 
-export function QuizClient({ examId, examName, examColor, sessionLabel, sessionId, questions }: Props) {
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
+export function QuizClient({ examId, examName, examColor, sessionLabel, sessionId, questions, isRandom }: Props) {
+  const [queue, setQueue] = useState<Question[]>(questions)
   const [currentIdx, setCurrentIdx] = useState(0)
   const [selected, setSelected] = useState<number | null>(null)
   const [answers, setAnswers] = useState<AnswerMap>({})
   const [showResult, setShowResult] = useState(false)
 
-  const current = questions[currentIdx]
+  const current = queue[currentIdx]
   const isAnswered = selected !== null
-  const isLast = currentIdx === questions.length - 1
+  const isLast = currentIdx === queue.length - 1
   const totalAnswered = Object.keys(answers).length
 
   const handleSelect = useCallback(
@@ -52,7 +63,7 @@ export function QuizClient({ examId, examName, examColor, sessionLabel, sessionI
   const correctCount = Object.values(answers).filter((a) => a.correct).length
 
   if (showResult) {
-    const accuracy = Math.round((correctCount / questions.length) * 100)
+    const accuracy = Math.round((correctCount / queue.length) * 100)
     return (
       <div className="max-w-lg mx-auto px-4 py-12 flex flex-col items-center text-center">
         <div className={`${examColor} w-20 h-20 rounded-full flex items-center justify-center mb-4`}>
@@ -61,13 +72,14 @@ export function QuizClient({ examId, examName, examColor, sessionLabel, sessionI
         <h2 className="text-xl font-bold text-gray-900 mb-1">풀이 완료!</h2>
         <p className="text-gray-500 mb-1">{sessionLabel}</p>
         <p className="text-lg text-gray-700 mb-8">
-          {questions.length}문제 중{' '}
+          {queue.length}문제 중{' '}
           <span className="font-bold text-gray-900">{correctCount}문제</span> 정답
         </p>
 
         <div className="w-full space-y-3">
           <button
             onClick={() => {
+              setQueue(shuffle(questions))
               setCurrentIdx(0)
               setSelected(null)
               setAnswers({})
@@ -102,7 +114,7 @@ export function QuizClient({ examId, examName, examColor, sessionLabel, sessionI
           ← 나가기
         </Link>
         <span className="text-sm font-medium text-gray-500">
-          {currentIdx + 1} / {questions.length}
+          {currentIdx + 1} / {queue.length}
         </span>
       </div>
 
@@ -110,7 +122,7 @@ export function QuizClient({ examId, examName, examColor, sessionLabel, sessionI
       <div className="bg-gray-200 rounded-full h-1.5 mb-6">
         <div
           className={`${examColor} h-1.5 rounded-full transition-all duration-300`}
-          style={{ width: `${((currentIdx + 1) / questions.length) * 100}%` }}
+          style={{ width: `${((currentIdx + 1) / queue.length) * 100}%` }}
         />
       </div>
 
